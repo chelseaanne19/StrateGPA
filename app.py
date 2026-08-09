@@ -28,7 +28,7 @@ MODULES = [
           "Grade Percentage" : 40},
 
          {"Description" : "Exam",
-          "Weeks" : [14, 15], # unconfirmed
+          "Weeks" : [16, 17], # unconfirmed
           "Must Pass Component" : 0,
           "Grade Percentage" : 60}
         ]
@@ -143,7 +143,7 @@ MODULES = [
           "Grade Percentage" : 9},
 
          {"Description" : "Written exam",
-          "Weeks" : [14, 15],
+          "Weeks" : [16, 17],
           "Must Pass Component" : 0,
           "Grade Percentage" : 60},
 
@@ -164,7 +164,7 @@ MODULES = [
           "Grade Percentage" : 30},
 
          {"Description" : "Written exam",
-          "Weeks" : [14, 15],
+          "Weeks" : [16, 17],
           "Must Pass Component" : 0,
           "Grade Percentage" : 70}
         ]
@@ -175,7 +175,7 @@ MODULES = [
      "Trimester" : "Spring",
      "Assessments" : [
          {"Description" : "Exam",
-          "Weeks" : [14, 15],
+          "Weeks" : [16, 17],
           "Must Pass Component" : 0,
           "Grade Percentage" : 80},
 
@@ -233,4 +233,5 @@ for module in MODULES:
         st.write(module["Title"])
         for assessment in module["Assessments"]:
             st.write(assessment["Description"])
-            st.write(assessment["Weeks"])
+            st.write(f"Weeks: {assessment["Weeks"]}")
+            st.write(f"Worth {assessment["Grade Percentage"]}% of grade")
