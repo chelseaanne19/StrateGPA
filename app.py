@@ -231,7 +231,11 @@ code_chosen = st.selectbox("MODULE CODE", MODULE_CODES)
 for module in MODULES:
     if module["Code"] == code_chosen:
         st.write(module["Title"])
-        for assessment in module["Assessments"]:
+
+        for index, assessment in enumerate(module["Assessments"]):
             st.write(assessment["Description"])
             st.write(f"Weeks: {assessment["Weeks"]}")
             st.write(f"Worth {assessment["Grade Percentage"]}% of grade")
+
+            # grade input
+            st.number_input("Enter grade received:", min_value = 0, max_value = 100, key=f"{module["Code"]}{index}")
