@@ -40,9 +40,13 @@ def confirm_module_submission(module_code, module_title, trimester):
 
     with yes:
         if st.button("Yes, Submit", use_container_width = True, key = "confirm_yes"):
-            insert_module(module_code, module_title, trimester)
-            st.success(f"{module_code} Registered Successfully!")
-            st.rerun()
+            success = insert_module(module_code, module_title, trimester)
+
+            if success:
+                st.success(f"{module_code} Registered Successfully!")
+                st.rerun()
+            else:
+                st.error("A module with this **code** or **title** *already exists* in your database.")
 
 @st.dialog("Edit Module Details")
 def edit_module_submission(df, orig_module_code):
@@ -64,9 +68,13 @@ def edit_module_submission(df, orig_module_code):
 
         if st.form_submit_button("Confirm Module Details"):
             if new_code and new_title:
-                update_module(orig_module_code, new_code, new_title, trimester)
-                st.session_state.trigger_edit = False
-                st.rerun()
+                success = update_module(orig_module_code, new_code, new_title, trimester)
+
+                if success:
+                    st.session_state.trigger_edit = False
+                    st.rerun()
+                else:
+                    st.error("A module with this **code** or **title** *already exists* in your database.")
             else:
                 st.error("Please fill in all fields.")
 
@@ -121,7 +129,10 @@ def render_module_section():
                             st.rerun()
 
 
+
+
+# running
 render_module_section()
-if st.session_state.trigger_edit:
+if st.session_state.get("trigger_edit", False):
     df = get_modules_dataframe()
     edit_module_submission(df, st.session_state.code_to_edit)

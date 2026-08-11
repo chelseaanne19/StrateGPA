@@ -159,127 +159,144 @@ def get_assessments_dataframe():
 
 # INSERT MODULE
 def insert_module(code_input, title_input, trimester_input):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cur = conn.cursor()
 
-        cur.execute('''
-                    INSERT INTO modules
-                    (module_code, module_title, trimester)
-                    VALUES
-                    (?, ?, ?)
-                    ''',
-                    (
-                        code_input,
-                        title_input,
-                        trimester_input
-                    )
-                    )
+            cur.execute('''
+                        INSERT INTO modules
+                        (module_code, module_title, trimester)
+                        VALUES
+                        (?, ?, ?)
+                        ''',
+                        (
+                            code_input,
+                            title_input,
+                            trimester_input
+                        )
+                        )
 
-        conn.commit()
+            conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
 # INSERT ASESSMENT
 def insert_assessment(module_code, title, percentage, must_pass, weeks_list):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cur = conn.cursor()
 
-        cur.execute('''
-                    INSERT INTO assessments
-                    (module_code, assessment_title, assessment_percentage, must_pass_component)
-                    VALUES
-                    (?, ?, ?, ?)
-                    ''',
-                    (
-                        module_code,
-                        title,
-                        percentage,
-                        must_pass
-                    )
-                    )
-        # variable needed for weeks table
-        assessment_id = cur.lastrowid
-
-        for week_num in weeks_list:
             cur.execute('''
-                        INSERT INTO assessment_weeks
-                        (assessment_id, week)
+                        INSERT INTO assessments
+                        (module_code, assessment_title, assessment_percentage, must_pass_component)
                         VALUES
-                        (?, ?)
+                        (?, ?, ?, ?)
                         ''',
                         (
-                            assessment_id,
-                            week_num
+                            module_code,
+                            title,
+                            percentage,
+                            must_pass
                         )
                         )
+            # variable needed for weeks table
+            assessment_id = cur.lastrowid
 
-        conn.commit()
+            for week_num in weeks_list:
+                cur.execute('''
+                            INSERT INTO assessment_weeks
+                            (assessment_id, week)
+                            VALUES
+                            (?, ?)
+                            ''',
+                            (
+                                assessment_id,
+                                week_num
+                            )
+                            )
+
+            conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
 
 
 # UPDATE MODULE
 def update_module(old_code, new_code, new_title, new_trimester):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cur = conn.cursor()
 
-        cur.execute("PRAGMA foreign_keys = ON")
+            cur.execute("PRAGMA foreign_keys = ON")
 
-        cur.execute('''
-                    UPDATE modules
-                    SET
-                        module_code = ?,
-                        module_title = ?,
-                        trimester = ?
-                    WHERE
-                        module_code = ?
-                    ''',
-                    (
-                        new_code,
-                        new_title,
-                        new_trimester,
-                        old_code
-                    )
-                    )
+            cur.execute('''
+                        UPDATE modules
+                        SET
+                            module_code = ?,
+                            module_title = ?,
+                            trimester = ?
+                        WHERE
+                            module_code = ?
+                        ''',
+                        (
+                            new_code,
+                            new_title,
+                            new_trimester,
+                            old_code
+                        )
+                        )
 
-        conn.commit()
+            conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
 # UPDATE ASSESSMENT
 def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_weeks_list):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cur = conn.cursor()
 
-        cur.execute("PRAGMA foreign_keys = ON")
+            cur.execute("PRAGMA foreign_keys = ON")
 
-        cur.execute('''
-                    UPDATE assessments
-                    SET
-                        module_code = ?,
-                        assessment_title = ?,
-                        assessment_percentage = ?,
-                        must_pass_component = ?
-                    WHERE
-                        id = ?
-                    ''',
-                    (
-                        new_module_code,
-                        new_title,
-                        new_percentage,
-                        new_must_pass,
-                        assessment_id
-                    )
-                    )
-        cur.execute("DELETE FROM assessment_weeks WHERE assessment_id = ?", (assessment_id,))
-        for week_num in new_weeks_list:
             cur.execute('''
-                        INSERT INTO assessment_weeks
-                        (assessment_id, week)
-                        VALUES
-                        (?, ?)s
+                        UPDATE assessments
+                        SET
+                            module_code = ?,
+                            assessment_title = ?,
+                            assessment_percentage = ?,
+                            must_pass_component = ?
+                        WHERE
+                            id = ?
                         ''',
                         (
-                            assessment_id,
-                            week_num
+                            new_module_code,
+                            new_title,
+                            new_percentage,
+                            new_must_pass,
+                            assessment_id
                         )
                         )
-        conn.commit()
+            cur.execute("DELETE FROM assessment_weeks WHERE assessment_id = ?", (assessment_id,))
+            for week_num in new_weeks_list:
+                cur.execute('''
+                            INSERT INTO assessment_weeks
+                            (assessment_id, week)
+                            VALUES
+                            (?, ?)s
+                            ''',
+                            (
+                                assessment_id,
+                                week_num
+                            )
+                            )
+            conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
 
 
 # DELETE MODULE
