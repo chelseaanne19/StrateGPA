@@ -5,7 +5,7 @@ functions involving SQL
 import sqlite3
 import pandas as pd
 
-DB_NAME = "module_and_assignments.db"
+DB_NAME = "modules_and_assessments.db"
 
 # TO CREATE TABLES
 def table_setup():
@@ -101,7 +101,7 @@ def seed_database(MODULES):
                     for week in assessment["Weeks"]:
                         cur.execute('''
                                     INSERT INTO assessment_weeks
-                                    (assignment_id, week)
+                                    (assessment_id, week)
                                     VALUES
                                     (?, ?)
                                     ''',
@@ -111,6 +111,8 @@ def seed_database(MODULES):
                                     )
 
     conn.commit()
+
+
 
 # FETCHES ALL MODULES AS A DATAFRAME
 def get_modules_dataframe():
@@ -127,6 +129,33 @@ def get_modules_dataframe():
         df = pd.read_sql_query(query, conn)
 
     return df
+
+# FETCHES ALL ASSESSMENTS AS A DATAFRAME
+def get_assessments_dataframe():
+    with sqlite3.connect(DB_NAME) as conn:
+        query = '''
+                SELECT
+                a.id AS 'Assessment ID',
+                a.assessment_title AS 'Assessment Title',
+                a.module_code AS 'Module Code',
+                a.assessment_percentage AS 'Weight %',
+                    CASE WHEN
+                    a.must_pass_component = 1
+                    THEN 'Yes'
+                    ELSE 'No'
+                    END AS 'Must Pass',
+                GROUP_CONCAT(w.weeks, ', ') AS 'Weeks Due'
+                FROM assessments a
+                LEFT JOIN assessment_weeks w
+                    ON a.id = w.assessment_id
+                GROUP BY a.id
+                '''
+
+        df = pd.read_sql_query(query, conn)
+
+    return df
+
+
 
 # INSERT MODULE
 def insert_module(code_input, title_input, trimester_input):
@@ -147,6 +176,44 @@ def insert_module(code_input, title_input, trimester_input):
                     )
 
         conn.commit()
+
+# INSERT ASESSMENT
+def insert_assessment(module_code, title, percentage, must_pass, weeks_list):
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute('''
+                    INSERT INTO assessments
+                    (module_code, assessment_title, assessment_percentage, must_pass_component)
+                    VALUES
+                    (?, ?, ?, ?)
+                    ''',
+                    (
+                        module_code,
+                        title,
+                        percentage,
+                        must_pass
+                    )
+                    )
+        # variable needed for weeks table
+        assessment_id = cur.lastrowid
+
+        for week_num in weeks_list:
+            cur.execute('''
+                        INSERT INTO assessment_weeks
+                        (assessment_id, week)
+                        VALUES
+                        (?, ?)
+                        ''',
+                        (
+                            assessment_id,
+                            week_num
+                        )
+                        )
+
+        conn.commit()
+
+
 
 # UPDATE MODULE
 def update_module(old_code, new_code, new_title, new_trimester):
@@ -174,6 +241,47 @@ def update_module(old_code, new_code, new_title, new_trimester):
 
         conn.commit()
 
+# UPDATE ASSESSMENT
+def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_weeks_list):
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute("PRAGMA foreign_keys = ON")
+
+        cur.execute('''
+                    UPDATE assessments
+                    SET
+                        module_code = ?,
+                        assessment_title = ?,
+                        assessment_percentage = ?,
+                        must_pass_component = ?
+                    WHERE
+                        id = ?
+                    ''',
+                    (
+                        new_module_code,
+                        new_title,
+                        new_percentage,
+                        new_must_pass,
+                        assessment_id
+                    )
+                    )
+        cur.execute("DELETE FROM assessment_weeks WHERE assessment_id = ?", (assessment_id,))
+        for week_num in new_weeks_list:
+            cur.execute('''
+                        INSERT INTO assessment_weeks
+                        (assessment_id, week)
+                        VALUES
+                        (?, ?)s
+                        ''',
+                        (
+                            assessment_id,
+                            week_num
+                        )
+                        )
+        conn.commit()
+
+
 # DELETE MODULE
 def delete_module(code_selected):
     with sqlite3.connect(DB_NAME) as conn:
@@ -187,6 +295,24 @@ def delete_module(code_selected):
                     ''',
                     (
                         code_selected,
+                    )
+                    )
+
+        conn.commit()
+
+# DELETE ASSESSMENT
+def delete_assessment(assessment_id):
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute("PRAGMA foreign_keys = ON")
+
+        cur.execute('''
+                    DELETE FROM assessments
+                    WHERE id = ?
+                    ''',
+                    (
+                        assessment_id,
                     )
                     )
 
