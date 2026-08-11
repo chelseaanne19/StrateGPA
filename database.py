@@ -148,6 +148,32 @@ def insert_module(code_input, title_input, trimester_input):
 
         conn.commit()
 
+# UPDATE MODULE
+def update_module(old_code, new_code, new_title, new_trimester):
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute("PRAGMA foreign_keys = ON")
+
+        cur.execute('''
+                    UPDATE modules
+                    SET
+                        module_code = ?,
+                        module_title = ?,
+                        trimester = ?
+                    WHERE
+                        module_code = ?
+                    ''',
+                    (
+                        new_code,
+                        new_title,
+                        new_trimester,
+                        old_code
+                    )
+                    )
+
+        conn.commit()
+
 # DELETE MODULE
 def delete_module(code_selected):
     with sqlite3.connect(DB_NAME) as conn:
