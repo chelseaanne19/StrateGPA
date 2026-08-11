@@ -18,7 +18,7 @@ def table_setup():
                     CREATE TABLE IF NOT EXISTS modules (
                         module_code TEXT PRIMARY KEY,
                         module_title TEXT NOT NULL UNIQUE,
-                        semester TEXT NOT NULL
+                        trimester TEXT NOT NULL
                         )
                     ''')
 
@@ -45,3 +45,67 @@ def table_setup():
                     ''')
 
         conn.commit()
+
+# TO INITIALISE TABLES (testing with hardcoded data (list) before user input is involved)
+def seed_database(MODULES):
+    # opening connection context manager
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        # querying if data exists in any table
+        cur.execute('''
+                    SELECT
+                        (SELECT COUNT(*)
+                        FROM modules) +
+                        (SELECT COUNT(*)
+                        FROM assessments) +
+                        (SELECT COUNT(*)
+                        FROM assessment_weeks)
+                    ''')
+
+        if cur.fetchone()[0] == 0:
+            for module in MODULES:
+                cur.execute('''
+                            INSERT INTO modules
+                            (module_code, module_title, trimester)
+                            VALUES
+                            (?, ?, ?)
+                            ''',
+                            (
+                                module["Code"],
+                                module["Title"],
+                                module["Trimester"]
+                            )
+                            )
+
+                for assessment in module["Assessments"]:
+                    cur.execute('''
+                                INSERT INTO assessments
+                                (module_code, assessment_title, assessment_percentage, must_pass_component)
+                                VALUES
+                                (?, ?, ?, ?)
+                                ''',
+                                (
+                                    module["Code"],
+                                    assessment["Description"],
+                                    assessment["Grade Percentage"],
+                                    assessment["Must Pass Component"]
+                                )
+                                )
+
+                    # variable needed for weeks table (need corresponding assessment with week numbers)
+                    assessment_id = cur.lastrowid
+
+                    for week in assessment["Weeks"]:
+                        cur.execute('''
+                                    INSERT INTO assessment_weeks
+                                    (assignment_id, week)
+                                    VALUES
+                                    (?, ?)
+                                    ''',
+                                    (
+                                        assessment_id, week
+                                    )
+                                    )
+
+    conn.commit()
