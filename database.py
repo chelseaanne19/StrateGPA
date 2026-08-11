@@ -109,3 +109,57 @@ def seed_database(MODULES):
                                     )
 
     conn.commit()
+
+# FETCHES ALL MODULES AS A DATAFRAME
+def get_modules_dataframe():
+    # opening connection context manager
+    with sqlite3.connect(DB_NAME) as conn:
+        query = '''
+                SELECT
+                module_code AS 'Module Code',
+                module_title AS 'Module Title',
+                trimester AS 'Trimester'
+                FROM modules
+                '''
+
+        df = pd.read_sql_query(query, conn)
+
+    return df
+
+# INSERT MODULE
+def insert_module(code_input, title_input, trimester_input):
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute('''
+                    INSERT INTO modules
+                    (module_code, module_title, trimester)
+                    VALUES
+                    (?, ?, ?)
+                    ''',
+                    (
+                        code_input,
+                        title_input,
+                        trimester_input
+                    )
+                    )
+
+        conn.commit()
+
+# DELETE MODULE
+def delete_module(code_selected):
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute("PRAGMA foreign_keys = ON")
+
+        cur.execute('''
+                    DELETE FROM modules
+                    WHERE module_code = ?
+                    ''',
+                    (
+                        code_selected,
+                    )
+                    )
+
+        conn.commit()
