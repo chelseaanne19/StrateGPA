@@ -30,7 +30,9 @@ def table_setup():
                         assessment_title TEXT NOT NULL,
                         assessment_percentage INTEGER NOT NULL,
                         must_pass_component INTEGER NOT NULL,
-                        FOREIGN KEY (module_code) REFERENCES modules (module_code) ON DELETE CASCADE
+                        FOREIGN KEY (module_code) REFERENCES modules (module_code)
+                        ON DELETE CASCADE
+                        ON UPDATE CASCADE
                         )
                     ''')
 
