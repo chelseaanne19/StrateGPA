@@ -1,6 +1,7 @@
 import streamlit as st
+import database
 
-# MODULE DETAILS
+MODULE DETAILS
 MODULES = [
     {"Code" : "COMP20360",
      "Title" : "Formal Foundations 2",
@@ -238,4 +239,11 @@ for module in MODULES:
             st.write(f"Worth {assessment["Grade Percentage"]}% of grade")
 
             # grade input
-            st.number_input("Enter grade received:", min_value = 0, max_value = 100, key=f"{module["Code"]}{index}")
+            assignment_grade_key = f"{module["Code"]}{index}"
+            st.number_input("Enter grade received:", min_value = 0, max_value = 100, key=assignment_grade_key)
+
+            if assignment_grade_key not in st.session_state:
+                st.session_state[assignment_grade_key] = []
+
+            
+            
