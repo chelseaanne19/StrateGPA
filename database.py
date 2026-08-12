@@ -144,7 +144,7 @@ def get_assessments_dataframe():
                     THEN 'Yes'
                     ELSE 'No'
                     END AS 'Must Pass',
-                GROUP_CONCAT(w.weeks, ', ') AS 'Weeks Due'
+                GROUP_CONCAT(w.week, ', ') AS 'Weeks Due'
                 FROM assessments a
                 LEFT JOIN assessment_weeks w
                     ON a.id = w.assessment_id
@@ -285,7 +285,7 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
                             INSERT INTO assessment_weeks
                             (assessment_id, week)
                             VALUES
-                            (?, ?)s
+                            (?, ?)
                             ''',
                             (
                                 assessment_id,

@@ -1,0 +1,20 @@
+# Python Virtual Environments
+.venv/
+venv/
+env
+# Python Caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+# Application Databases
+*.db
+*.db-journal
+*.sqlite
+# Streamlit Local Configurations
+.streamlit/config.toml
+.streamlit/secrets.toml
+# Local files
+app.py
+test.py
