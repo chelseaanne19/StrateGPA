@@ -7,6 +7,9 @@ import pandas as pd
 
 DB_NAME = "modules_and_assessments.db"
 
+#####################################
+# CRUD FUNCTIONS
+#####################################
 # TO CREATE TABLES
 def table_setup():
     # opening connection context manager
@@ -334,3 +337,38 @@ def delete_assessment(assessment_id):
                     )
 
         conn.commit()
+
+
+
+################################
+# WEEKLY WORKLOAD FUNCTIONS
+################################
+
+# gets workload grouped by week, always filtered by trimester, and module if selected
+def get_weekly_workload(trimester, module_code = None):
+    with sqlite3.connect(DB_NAME) as conn:
+
+        query = '''
+                SELECT w.week as 'Week', SUM(a.assessment_percentage) AS 'Total Workload (%)'
+                FROM assessment_weeks w JOIN assessments a
+                ON w.assessment_id = a.id
+                JOIN modules m
+                ON m.module_code = a.module_code
+                WHERE trimester = ?
+                '''
+
+        # trimester must always be filtered
+        params = [trimester]
+
+        # optional filter of module
+        if module_code is not None:
+            params.append(module_code)
+            query += " AND m.module_code = ?"
+
+
+        # complete query
+        query += " GROUP BY w.week ORDER BY w.week ASC"
+
+        df = pd.read_sql_query(query, conn, params = tuple(params))
+        return df
+        
