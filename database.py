@@ -371,4 +371,23 @@ def get_weekly_workload(trimester, module_code = None):
 
         df = pd.read_sql_query(query, conn, params = tuple(params))
         return df
-        
+
+# gets weekly workload contributors as modules
+def get_week_contributors(trimester, target_week):
+    with sqlite3.connect(DB_NAME) as conn:
+        query = ''' 
+                SELECT
+                    m.module_code AS 'Module Code',
+                    m.module_title AS 'Module Title',
+                    SUM(a.assessment_percentage) AS 'Contribution (%)'
+                    FROM assessment_weeks w
+                    JOIN assessments ON assessment.id = w.assessment_id
+                    JOIN modules ON m.module_code = a.module_code
+                    WHERE m.trimester = ? AND w.week = ?
+                    GROUP BY m.module_code
+                    ORDER BY [Contribution (%)] DESC
+                '''
+
+        df = pd.read_sql_quer(query, conn, params = (trimester, target_week))
+
+    return df
