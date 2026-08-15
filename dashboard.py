@@ -75,7 +75,7 @@ m_col1, m_col2, m_col3 = st.columns(3)
 with m_col1:
     with st.container(border=True):
         st.metric(
-            label="🔥 Busiest Week Window", 
+            label="Busiest Week Window", 
             value=f"Week {busiest_week}" if max_workload > 0 else "Clear Term",
             delta=f"{max_workload:.1f}% Due" if max_workload > 0 else None,
             delta_color="inverse" # Turns red automatically on spikes to catch recruiter focus
@@ -84,7 +84,7 @@ with m_col1:
 with m_col2:
     with st.container(border=True):
         st.metric(
-            label="📈 Tracker Weight Configured", 
+            label="Tracker Weight Configured", 
             value=f"{total_term_weight:.1f}%",
             delta=f"{100.0 - total_term_weight:.1f}% Remaining"
         )
