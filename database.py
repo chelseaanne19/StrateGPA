@@ -301,6 +301,27 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
     except sqlite3.IntegrityError:
         return False
 
+# SUBMIT GRADES
+def update_assessment_grade(assessment_id, grade):
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cur = conn.cursor()
+
+            cur.execute('''
+                        UPDATE assessments
+                        SET received_grade = ?
+                        WHERE id = ?
+                        ''',
+                        (
+                            grade,
+                            assessment_id
+                        )
+                        )
+            conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
 
 
 # DELETE MODULE
