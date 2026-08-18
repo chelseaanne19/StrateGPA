@@ -413,3 +413,37 @@ def get_week_contributors(trimester, target_week):
         df = pd.read_sql_quer(query, conn, params = (trimester, target_week))
 
     return df
+
+def get_grade_progress(trimester, module_code = None):
+    query = '''
+        SELECT 
+            COALESCE(SUM(a.assessment_percentage), 0) AS total_weight,
+            COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN a.assessment_percentage ELSE 0 END), 0) AS completed_weight,
+            COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN (a.assessment_percentage * (a.received_grade / 100.0)) ELSE 0 END), 0) AS earned_points
+        FROM assessments a
+        JOIN modules m ON a.module_code = m.module_code
+        WHERE m.trimester = ?
+    '''
+    
+    params = [trimester]
+
+    if module_code is not None:
+        query += " AND a.module_code = ?"
+        params.append(module_code)
+        
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+        cur.execute(query, tuple(params))
+        row = cur.fetchone()
+        
+        total_weight = float(row[0])
+        completed_weight = float(row[1])
+        earned_points = float(row[2])
+        upcoming_weight = total_weight - completed_weight
+        
+    return {
+        "total_weight": total_weight,
+        "completed_weight": completed_weight,
+        "earned_points": earned_points,
+        "upcoming_weight": upcoming_weight
+    }
