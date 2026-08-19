@@ -7,10 +7,9 @@ import pandas as pd
 
 DB_NAME = "modules_and_assessments.db"
 
-#####################################
-# CRUD FUNCTIONS
-#####################################
-# TO CREATE TABLES
+# ___________________
+# TABLES
+# ___________________
 def table_setup():
     # opening connection context manager
     with sqlite3.connect(DB_NAME) as conn:
@@ -33,6 +32,7 @@ def table_setup():
                         assessment_title TEXT NOT NULL,
                         assessment_percentage INTEGER NOT NULL,
                         must_pass_component INTEGER NOT NULL,
+                        week INTEGER NOT NULL,
                         received_grade REAL DEFAULT NULL,
                         FOREIGN KEY (module_code) REFERENCES modules (module_code)
                         ON DELETE CASCADE
@@ -40,16 +40,60 @@ def table_setup():
                         )
                     ''')
 
-        # assessment weeks table
+        # settings
         cur.execute('''
-                    CREATE TABLE IF NOT EXISTS assessment_weeks (
+                    CREATE TABLE IF NOT EXISTS settings (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        assessment_id INTEGER NOT NULL,
-                        week INTEGER NOT NULL,
-                        FOREIGN KEY (assessment_id) REFERENCES assessments (id) ON DELETE CASCADE
+                        institution_name TEXT NOT NULL,
+                        grading_system TEXT NOT NULL,
+                        target_gpa REAL NOT NULL
                         )
                     ''')
 
+        conn.commit()
+
+
+# _________________
+# SETTINGS / CONFIGURATIONS
+# _________________
+def get_user_settings():
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute('''
+                    SELECT
+                        institution_name,
+                        grading_system,
+                        target_gpa
+                    FROM settings
+                    LIMIT 1
+                    ''')
+
+        row = cur.fetchone()
+
+    if row:
+        return{"institution" : row[0],
+               "system" : row[1],
+               "target_gpa" : row[2]}
+
+    return None
+
+def save_user_settings(institution, system, target):
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM settings")
+        cur.execute('''
+                    INSERT INTO settings
+                        (institution_name,
+                        grading_system,
+                        target_gpa)
+                    VALUES
+                        (?, ?, ?)
+                    ''',
+                    (
+                        (institution, system, target)
+                    )
+                    )
         conn.commit()
 
 # TO INITIALISE TABLES (testing with hardcoded data (list) before user input is involved)
@@ -117,7 +161,9 @@ def seed_database(MODULES):
     conn.commit()
 
 
-
+# __________________
+# DATA / DATAFRAME FETCHING
+# __________________
 # FETCHES ALL MODULES AS A DATAFRAME
 def get_modules_dataframe():
     # opening connection context manager
@@ -139,20 +185,19 @@ def get_assessments_dataframe():
     with sqlite3.connect(DB_NAME) as conn:
         query = '''
                 SELECT
-                a.id AS 'Assessment ID',
-                a.assessment_title AS 'Assessment Title',
-                a.module_code AS 'Module Code',
-                a.assessment_percentage AS 'Weight %',
+                id AS 'Assessment ID',
+                assessment_title AS 'Assessment Title',
+                module_code AS 'Module Code',
+                assessment_percentage AS 'Weight %',
                     CASE WHEN
-                    a.must_pass_component = 1
+                    must_pass_component = 1
                     THEN 'Yes'
                     ELSE 'No'
                     END AS 'Must Pass',
-                GROUP_CONCAT(w.week, ', ') AS 'Weeks Due'
-                FROM assessments a
-                LEFT JOIN assessment_weeks w
-                    ON a.id = w.assessment_id
-                GROUP BY a.id
+                    week AS 'Week Due',
+                    CASE WHEN received_grade IS NOT NULL THEN PRINTF('%.1f%%', received_grade) ELSE 'Pending' END AS 'Result'
+                FROM assessments
+                ORDER BY week ASC, module_code ASC
                 '''
 
         df = pd.read_sql_query(query, conn)
@@ -191,35 +236,27 @@ def insert_assessment(module_code, title, percentage, must_pass, weeks_list):
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
 
-            cur.execute('''
-                        INSERT INTO assessments
-                        (module_code, assessment_title, assessment_percentage, must_pass_component)
-                        VALUES
-                        (?, ?, ?, ?)
-                        ''',
-                        (
-                            module_code,
-                            title,
-                            percentage,
-                            must_pass
-                        )
-                        )
-            # variable needed for weeks table
-            assessment_id = cur.lastrowid
-
             for week_num in weeks_list:
+                display_title = f"{title} (Wk {week_num})" if len(weeks_list) > 1 else title
                 cur.execute('''
-                            INSERT INTO assessment_weeks
-                            (assessment_id, week)
+                            INSERT INTO assessments
+                                (module_code,
+                                assessment_title,
+                                assessment_percentage,
+                                must_pass_component,
+                                week,
+                                received_grade)
                             VALUES
-                            (?, ?)
+                                (?, ?, ?, ?, ?, NULL)
                             ''',
                             (
-                                assessment_id,
+                                module_code,
+                                display_title,
+                                percentage,
+                                must_pass,
                                 week_num
                             )
                             )
-
             conn.commit()
         return True
     except sqlite3.IntegrityError:
@@ -232,7 +269,6 @@ def update_module(old_code, new_code, new_title, new_trimester):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
-
             cur.execute("PRAGMA foreign_keys = ON")
 
             cur.execute('''
@@ -258,11 +294,10 @@ def update_module(old_code, new_code, new_title, new_trimester):
         return False
 
 # UPDATE ASSESSMENT
-def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_weeks_list):
+def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
-
             cur.execute("PRAGMA foreign_keys = ON")
 
             cur.execute('''
@@ -271,7 +306,8 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
                             module_code = ?,
                             assessment_title = ?,
                             assessment_percentage = ?,
-                            must_pass_component = ?
+                            must_pass_component = ?,
+                            week = ?
                         WHERE
                             id = ?
                         ''',
@@ -280,22 +316,10 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
                             new_title,
                             new_percentage,
                             new_must_pass,
+                            new_week,
                             assessment_id
                         )
                         )
-            cur.execute("DELETE FROM assessment_weeks WHERE assessment_id = ?", (assessment_id,))
-            for week_num in new_weeks_list:
-                cur.execute('''
-                            INSERT INTO assessment_weeks
-                            (assessment_id, week)
-                            VALUES
-                            (?, ?)
-                            ''',
-                            (
-                                assessment_id,
-                                week_num
-                            )
-                            )
             conn.commit()
         return True
     except sqlite3.IntegrityError:
@@ -362,18 +386,16 @@ def delete_assessment(assessment_id):
 
 
 
-################################
+# _________________________
 # WEEKLY WORKLOAD FUNCTIONS
-################################
+# _________________________
 
 # gets workload grouped by week, always filtered by trimester, and module if selected
 def get_weekly_workload(trimester, module_code = None):
     with sqlite3.connect(DB_NAME) as conn:
-
         query = '''
-                SELECT w.week as 'Week', SUM(a.assessment_percentage) AS 'Total Workload (%)'
-                FROM assessment_weeks w JOIN assessments a
-                ON w.assessment_id = a.id
+                SELECT a.week as 'Week', SUM(a.assessment_percentage) AS 'Total Workload (%)'
+                FROM assessments a
                 JOIN modules m
                 ON m.module_code = a.module_code
                 WHERE trimester = ?
@@ -389,7 +411,7 @@ def get_weekly_workload(trimester, module_code = None):
 
 
         # complete query
-        query += " GROUP BY w.week ORDER BY w.week ASC"
+        query += " GROUP BY a.week ORDER BY a.week ASC"
 
         df = pd.read_sql_query(query, conn, params = tuple(params))
         return df
@@ -402,37 +424,37 @@ def get_week_contributors(trimester, target_week):
                     m.module_code AS 'Module Code',
                     m.module_title AS 'Module Title',
                     SUM(a.assessment_percentage) AS 'Contribution (%)'
-                    FROM assessment_weeks w
-                    JOIN assessments ON assessment.id = w.assessment_id
+                    FROM assessments a
                     JOIN modules ON m.module_code = a.module_code
-                    WHERE m.trimester = ? AND w.week = ?
+                    WHERE m.trimester = ? AND a.week = ?
                     GROUP BY m.module_code
                     ORDER BY [Contribution (%)] DESC
                 '''
 
-        df = pd.read_sql_quer(query, conn, params = (trimester, target_week))
+        df = pd.read_sql_query(query, conn, params = (trimester, target_week))
 
     return df
 
 def get_grade_progress(trimester, module_code = None):
-    query = '''
-        SELECT 
-            COALESCE(SUM(a.assessment_percentage), 0) AS total_weight,
-            COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN a.assessment_percentage ELSE 0 END), 0) AS completed_weight,
-            COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN (a.assessment_percentage * (a.received_grade / 100.0)) ELSE 0 END), 0) AS earned_points
-        FROM assessments a
-        JOIN modules m ON a.module_code = m.module_code
-        WHERE m.trimester = ?
-    '''
-    
-    params = [trimester]
-
-    if module_code is not None:
-        query += " AND a.module_code = ?"
-        params.append(module_code)
-        
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
+        query = '''
+            SELECT 
+                COALESCE(SUM(a.assessment_percentage), 0) AS total_weight,
+                COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN a.assessment_percentage ELSE 0 END), 0) AS completed_weight,
+                COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN (a.assessment_percentage * (a.received_grade / 100.0)) ELSE 0 END), 0) AS earned_points
+            FROM assessments a
+            JOIN modules m ON a.module_code = m.module_code
+            WHERE m.trimester = ?
+        '''
+    
+        params = [trimester]
+
+        if module_code is not None:
+            query += " AND a.module_code = ?"
+            params.append(module_code)
+        
+
         cur.execute(query, tuple(params))
         row = cur.fetchone()
         
@@ -447,3 +469,22 @@ def get_grade_progress(trimester, module_code = None):
         "earned_points": earned_points,
         "upcoming_weight": upcoming_weight
     }
+
+def get_week_agenda(trimester, target_week):
+    with sqlite3.connect(DB_NAME) as conn:
+        query = '''
+                SELECT
+                    a.id AS 'Assessment ID',
+                    a.module_code AS 'Module Code',
+                    a.assessment_title AS 'Assessment Title',
+                    a.assessment_percentage AS 'Weight %',
+                    a.must_pass_component AS 'Must Pass',
+                    a.received_grade AS 'Received Grade'
+                FROM assessments a
+                JOIN modules m on a.module_code = m.module_code
+                WHERE m.trimester = ? AND a.week = ?
+                ORDER BY a.module_code ASC
+                '''
+
+        df = pd.read_sql_query(query, conn, params = (trimester, target_week))
+        return df
