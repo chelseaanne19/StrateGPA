@@ -30,4 +30,4 @@ if user_profile is None:
             else:
                 st.error("Please fill in fields correctly.")
 else:
-    # set up pages / views
+    st.write("set up pages / views")
