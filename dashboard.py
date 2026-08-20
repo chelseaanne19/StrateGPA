@@ -113,3 +113,65 @@ else:
         color ="#f2de84",
         use_container_width = True
     )
+
+st.write("____")
+
+
+#################
+# WEEKLY AGENDA
+#################
+st.write(f"Agenda: Week {active_week}")
+tab_contributors, tab_agenda = st.tabs(["Module Contributors", "Week Tasks"])
+
+
+with tab_contributors:
+    df_contributors = get_week_contributors(selected_trimester, active_week)
+    if df_contributors.empty:
+        st.info(f"Week {active_week} is clear!")
+    else:
+        st.write("#### Important Modules for Week {active_week}")
+        for idx, row in df_contributors.iterrows():
+            st.markdown(f"**{row['Module Code']}** - *{row['Module Title']}* : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
+            st.progress(float(row['Contribution (%)']) / 100.0)
+
+with tab_agenda:
+    df_agenda = get_week_agenda(selected_trimester, active_week)
+    if df_agenda.empty:
+        st.info(f"Week {active_week} is clear!")
+    else:
+        st.write(f"#### Tasks for week {active_week}")
+        for idx, row in df_agenda.iterrows():
+            ass_id = int(row['Assessment ID'])
+            mod_code = row['Module Code']
+            title = row['Assessment Title']
+            weight = float(row['Weight %'])
+            must_pass = int(row['Must Pass'])
+            current_grade = row["Received Grade"]
+            is_graded = pd.notna(current_grade)
+
+            grade_status = f"Graded: {current_grade:.1f}%" if is_graded else "Grade Pending ...."
+            with st.expander(f"{mod_code} - {title} ({weight:.0f}%)  |  {grade_status}"):
+                st.markdown(f"**Task:** {title}")
+                st.markdown(f"**Grade Impact:** Contributes **{weight:.1f}%** towards module.")
+                if must_pass == 1:
+                    st.error("**MUST PASS THIS ASSESSMENT**")
+
+                with st.form(key = f"grade_form_{ass_id}"):
+                    default_val = float(current_grade) if is_graded else 0.0
+                    new_grade_score = st.number_input(
+                        "Enter achieved score (0.0 -> 100.0):",
+                        min_value = 0.0,
+                        max_value = 100.0,
+                        value = default_val,
+                        step = 0.5,
+                        key = f"grade_input_{ass_id}"
+                    )
+
+                    col_save, col_clear = st.columns(2)
+                    with st.form_submit_button("Save Grade Score", use_container_width = True, type = "primary"):
+                        update_assessment_grade(ass_id, new_grade_score)
+                        st.rerun()
+                    with col_clear:
+                        if st.form_submit_button("Clear Grade", use_container_width = True):
+                            update_assessment_grade(ass_id, None)
+                            st.rerun
