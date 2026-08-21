@@ -425,7 +425,7 @@ def get_week_contributors(trimester, target_week):
                     m.module_title AS 'Module Title',
                     SUM(a.assessment_percentage) AS 'Contribution (%)'
                     FROM assessments a
-                    JOIN modules ON m.module_code = a.module_code
+                    JOIN modules m ON m.module_code = a.module_code
                     WHERE m.trimester = ? AND a.week = ?
                     GROUP BY m.module_code
                     ORDER BY [Contribution (%)] DESC
