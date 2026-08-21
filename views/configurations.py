@@ -248,8 +248,11 @@ def render_assessment_section():
                 percentage = st.slider("Weight on Final Grade (%)", 0, 100)
                 
                 st.info('''
-                        Note that if the assessment has multiple weeks, please input the weighting of each assessment 
-                        (e.g. 10 Quizzes spanning weeks 1 to 10 = 80% of grade, therefore each quiz assessment = 8% weighting.)
+                        💡 **Assessment Group Entry:** If this assessment has multiple parts spread across the term 
+                        (for example: 3 In Class Tests worth 55% *in total together*), enter the name as 'In Class Test',
+                        select all 3 weeks, and input **55** as the weight.\n\n
+                        StrateGPA will automatically split them into separate tracking items and handle
+                        the individual weight distributions for you!
                         ''')
                 must_pass = st.toggle("Must Pass Component")
                 
