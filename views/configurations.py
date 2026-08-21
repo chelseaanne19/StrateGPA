@@ -51,7 +51,7 @@ def confirm_module_submission(module_code, module_title, trimester):
         if st.button("No, Go Back", use_container_width = True, key = "unconfirm_module_submission"):
             st.rerun()
     with yes:
-        if st.button("Yes, Submit", use_container_width = True, key = "confirm_module_submission"):
+        if st.button("Yes, Submit", use_container_width = True, type = "primary", key = "confirm_module_submission"):
             success = insert_module(module_code, module_title, trimester)
             if success:
                 st.success(f"{module_code} Registered Successfully!")
@@ -121,6 +121,7 @@ def edit_assessment_submission(assessment_id):
     orig_title = resulting_row["Assessment Title"].values[0]
     orig_code = resulting_row["Module Code"].values[0]
     orig_percentage = int(resulting_row["Weight %"].values[0])
+    orig_week = int(resulting_row["Week Due"].values[0])
     orig_must_pass = resulting_row["Must Pass"].values[0]
     bool_must_pass = True if orig_must_pass == "Yes" else False
 
@@ -132,13 +133,13 @@ def edit_assessment_submission(assessment_id):
         new_code = st.selectbox("Select correct module:", options = module_list, index = code_index, key = "new_ass_code")
         new_percentage = st.slider("Enter correct weighting:", 0, 100, value = orig_percentage, key = "new_ass_weighting")
         new_must_pass = st.toggle("Must Pass Component", value = bool_must_pass, key = "new_must_pass")
-        new_weeks_list = st.multiselect("Select correct weeks assessment is due:", options = list(range(1, 18)), key = "new_ass_weeks_list")
+        new_week = st.selectbox("Select correct week assessment is due:", options = list(range(1, 18)), index = orig_week - 1, key = "new_ass_weeks_list")
 
         if st.form_submit_button("Confirm Assessment Details", key = "confirm_assessment_details"):
-            if new_title.strip() and new_code and new_weeks_list:
+            if new_title.strip() and new_code and new_week:
                 must_pass_int = 1 if new_must_pass else 0
 
-                success = update_assessment(assessment_id, new_code, new_title.strip(), new_percentage, must_pass_int, new_weeks_list)
+                success = update_assessment(assessment_id, new_code, new_title.strip(), new_percentage, must_pass_int, new_week)
 
                 if success:
                     st.session_state.trigger_edit_assessment = False

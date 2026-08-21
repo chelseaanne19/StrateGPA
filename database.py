@@ -236,8 +236,20 @@ def insert_assessment(module_code, title, percentage, must_pass, weeks_list):
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
 
-            for week_num in weeks_list:
-                display_title = f"{title} (Wk {week_num})" if len(weeks_list) > 1 else title
+            # calculate assessment weighting
+            num_weeks = len(weeks_list)
+            base_weight = percentage // num_weeks
+            remainder = percentage % num_weeks
+
+            for index, week_num in enumerate(weeks_list):
+                display_title = f"{title} (Wk {week_num})" if num_weeks > 1 else title
+
+                if index == num_weeks - 1: # last week
+                    row_weight = base_weight + remainder
+                else:
+                    row_weight = base_weight
+
+
                 cur.execute('''
                             INSERT INTO assessments
                                 (module_code,
@@ -252,7 +264,7 @@ def insert_assessment(module_code, title, percentage, must_pass, weeks_list):
                             (
                                 module_code,
                                 display_title,
-                                percentage,
+                                row_weight,
                                 must_pass,
                                 week_num
                             )
