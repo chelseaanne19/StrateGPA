@@ -110,7 +110,7 @@ else:
         data = chart_df,
         x = "Week",
         y = "Total Workload (%)",
-        color ="#f2de84",
+        color = "Module",
         use_container_width = True
     )
 

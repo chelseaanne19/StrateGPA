@@ -14,6 +14,23 @@ if user_profile is None:
         inst_name = st.text_input("University / College Name:")
         system_choice = st.selectbox("Grading Scale System:", options = ["UCD 4.2 Scale", "US 4.0 Scale", "Percentage Only"])
 
+        col_aut, col_spr = st.columns(2)
+        with col_aut:
+            weeks_aut = st.number_input(
+            "Autumn Teaching Duration (Weeks):",
+            min_value = 1,
+            max_value = 17,
+            value = 17,
+            step = 17)
+
+        with col_spr:
+            weeks_spr = st.number_input(
+            "Spring Teaching Duration (Weeks):",
+            min_value = 1,
+            max_value = 17,
+            value = 14,
+            step = 1)
+
         if "Percentage" in system_choice:
             target_score = st.slider("Target Honours Goal:", 40.0, 100.0, 70.0, step = 0.5, format = "%.1f%%")
         elif "4.2" in system_choice:
@@ -24,7 +41,7 @@ if user_profile is None:
 
         if st.button("Complete Setup & Initialise Dashboard", type = "primary", use_container_width = True):
             if inst_name.strip():
-                save_user_settings(inst_name.strip(), system_choice, target_score)
+                save_user_settings(inst_name.strip(), system_choice, target_score, weeks_aut, weeks_spr)
                 st.success("Successfully recorded! Loading application views....")
                 st.rerun()
             else:

@@ -46,7 +46,9 @@ def table_setup():
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         institution_name TEXT NOT NULL,
                         grading_system TEXT NOT NULL,
-                        target_gpa REAL NOT NULL
+                        target_gpa REAL NOT NULL,
+                        teaching_weeks_autumn INTEGER NOT NULL DEFAULT 12,
+                        teaching_weeks_spring INTEGER NOT NULL DEFAULT 14
                         )
                     ''')
 
@@ -64,7 +66,9 @@ def get_user_settings():
                     SELECT
                         institution_name,
                         grading_system,
-                        target_gpa
+                        target_gpa,
+                        teaching_weeks_autumn,
+                        teaching_weeks_spring
                     FROM settings
                     LIMIT 1
                     ''')
@@ -74,11 +78,13 @@ def get_user_settings():
     if row:
         return{"institution" : row[0],
                "system" : row[1],
-               "target_gpa" : row[2]}
+               "target_gpa" : row[2],
+               "teaching_weeks_autumn" : int(row[3]),
+               "teaching_weeks_spring" : int(row[4])}
 
     return None
 
-def save_user_settings(institution, system, target):
+def save_user_settings(institution, system, target, teaching_weeks_autumn, teaching_weeks_spring):
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
         cur.execute("DELETE FROM settings")
@@ -86,12 +92,14 @@ def save_user_settings(institution, system, target):
                     INSERT INTO settings
                         (institution_name,
                         grading_system,
-                        target_gpa)
+                        target_gpa,
+                        teaching_weeks_autumn,
+                        teaching_weeks_spring)
                     VALUES
                         (?, ?, ?)
                     ''',
                     (
-                        (institution, system, target)
+                        (institution, system, target, teaching_weeks_autumn, teaching_weeks_spring)
                     )
                     )
         conn.commit()
@@ -306,7 +314,7 @@ def update_module(old_code, new_code, new_title, new_trimester):
         return False
 
 # UPDATE ASSESSMENT
-def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week):
+def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_weeks_list):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
@@ -406,7 +414,10 @@ def delete_assessment(assessment_id):
 def get_weekly_workload(trimester, module_code = None):
     with sqlite3.connect(DB_NAME) as conn:
         query = '''
-                SELECT a.week as 'Week', SUM(a.assessment_percentage) AS 'Total Workload (%)'
+                SELECT
+                    a.week as 'Week',
+                    SUM(a.assessment_percentage) AS 'Total Workload (%)',
+                    m.module_code AS 'Module'
                 FROM assessments a
                 JOIN modules m
                 ON m.module_code = a.module_code
@@ -423,7 +434,7 @@ def get_weekly_workload(trimester, module_code = None):
 
 
         # complete query
-        query += " GROUP BY a.week ORDER BY a.week ASC"
+        query += " GROUP BY a.week, m.module_code ORDER BY a.week ASC"
 
         df = pd.read_sql_query(query, conn, params = tuple(params))
         return df
