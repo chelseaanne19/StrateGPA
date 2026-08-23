@@ -3,7 +3,8 @@ import pandas as pd
 from database import (
     get_modules_dataframe, get_weekly_workload,
     get_grade_progress, get_week_contributors,
-    get_week_agenda, update_assessment_grade
+    get_week_agenda, update_assessment_grade,
+    get_user_settings
 )
 
 st.set_page_config(page_title = "Dashboard", layout = "wide")
@@ -102,6 +103,13 @@ st.write("_____")
 
 
 st.write(f"### 📈 Workload Heatmap: {selected_module}")
+
+user_profile = get_user_settings()
+
+if selected_trimester == "Autumn":
+    max_teaching_weeks = user_profile["teaching_weeks_autumn"] if user_profile else 12
+else:
+    max_teaching_weeks = user_profile["teaching_weeks_spring"] if user_profile else 14
 
 if chart_df["Total Workload (%)"].sum() == 0:
     st.info("No active assessments located for this dashboard filter.")
