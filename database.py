@@ -96,7 +96,7 @@ def save_user_settings(institution, system, target, teaching_weeks_autumn, teach
                         teaching_weeks_autumn,
                         teaching_weeks_spring)
                     VALUES
-                        (?, ?, ?)
+                        (?, ?, ?, ?, ?)
                     ''',
                     (
                         (institution, system, target, teaching_weeks_autumn, teaching_weeks_spring)
