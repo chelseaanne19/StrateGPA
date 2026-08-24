@@ -21,7 +21,7 @@ if user_profile is None:
             min_value = 1,
             max_value = 17,
             value = 17,
-            step = 17)
+            step = 1)
 
         with col_spr:
             weeks_spr = st.number_input(
