@@ -176,10 +176,11 @@ with tab_agenda:
                     )
 
                     col_save, col_clear = st.columns(2)
-                    with st.form_submit_button("Save Grade Score", use_container_width = True, type = "primary"):
-                        update_assessment_grade(ass_id, new_grade_score)
-                        st.rerun()
+                    with col_save:
+                        if st.form_submit_button("Save Grade Score", use_container_width = True, type = "primary"):
+                            update_assessment_grade(ass_id, new_grade_score)
+                            st.rerun()
                     with col_clear:
                         if st.form_submit_button("Clear Grade", use_container_width = True):
                             update_assessment_grade(ass_id, None)
-                            st.rerun
+                            st.rerun()
