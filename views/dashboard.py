@@ -128,6 +128,7 @@ else:
             (0.8, "#e74c3c"),
             (1.0, "#e74c3c")
         ],
+        range_color = [0, 1],
         labels = {"Week": "Academic Week Number", "Total Workload (%)": "Total Workload (%)"},
     )
 
