@@ -240,21 +240,58 @@ def render_assessment_section():
     with col_form:
         with st.container(border = True):
             st.markdown("#### Create Assessments Here")
+
+            # choose module
+            module_options = df_modules["Module Code"].tolist() if not df_modules.empty else []
+            module_code = st.selectbox("Assign Module Code for Assessment", options = module_options, key = "new_module_code")
+
+            if not df_modules.empty and module_code:
+                current_trimester = df_modules[df["Module Code"] == module_code]["Trimester"].values[0]
+            else:
+                current_trimester = "Autumn"
+
+            # getting configured exam weeks for that semester
+            if user_profile:
+                teaching_weeks = user_profile["teaching_weeks_autumn"] if current_trimester == "Autumn" else user_profile["teaching_weeks_spring"]
+                exam_weeks = list(range(teaching_weeks + 1, teaching_weeks + 4))
+                exam_weeks_str = ", ".join(map(str, exam_weeks))
+            else:
+                exam_weeks = [13, 14]
+                exam_weeks_str = "13, 14"
+
+            # toggle to indicate info statements for form
+            is_final_exam = st.toggle("Assessment is an end of semester final exam")
+
+            # form submission
             with st.form("new_assessment_form", clear_on_submit = True):
-                module_options = df_modules["Module Code"].tolist() if not df_modules.empty else []
-                module_code = st.selectbox("Assign Module Code", options = module_options, key = "new_module_code")
-                title = st.text_input("Enter Assessment Title", placeholder = "e.g. In Class Test, MCQ, Group Project")
-                weeks = st.multiselect("Please select weeks assessment is due", options = list(range(1, 18)))
-                percentage = st.slider("Weight on Final Grade (%)", 0, 100)
-                
-                st.info('''
-                        💡 **Assessment Group Entry:** If this assessment has multiple parts spread across the term 
-                        (for example: 3 In Class Tests worth 55% *in total together*), enter the name as 'In Class Test',
-                        select all 3 weeks, and input **55** as the weight.\n\n
-                        StrateGPA will automatically split them into separate tracking items and handle
-                        the individual weight distributions for you!
-                        ''')
-                must_pass = st.toggle("Must Pass Component")
+                tab_title, tab_weeks, tab_weightings = st.tabs(["Title", "Weeks", "Weightings"])
+
+                with tab_title:
+                    title = st.text_input("**Assessment Title**", placeholder = "e.g. In Class Test, MCQ, Group Project")
+                    
+                with tab_weeks:
+                    if is_final_exam:
+                        st.info(
+                            f"**Automated Exam Placement:** This assessment will be automatically "
+                            f"registered across your configured exam block (**Weeks {exam_weeks_str}**) for {current_trimester}.\n\n"
+                            f"*NOTE: If you already happen to know the exact specific week of your exam, toggle "
+                            f"this switch OFF and log the target week manually instead!*")
+                        weeks = exam_weeks
+                    else:
+                        weeks = st.multiselect("**Please select week(s) assessment is due**", options = list(range(1, 18)))
+
+                with tab_weightings:
+                    percentage = st.slider("Weight on Final Grade (%)", 0, 100)
+                    if not is_final_exam:
+                        st.info('''
+                            💡 **Assessment Group Entry:** If this assessment has multiple parts spread across the term 
+                            (for example: 3 In Class Tests worth 55% *in total together*), enter the name as 'In Class Test',
+                            select all 3 weeks, and input **55** as the weight.\n\n
+                            StrateGPA will automatically split them into separate tracking items and handle
+                            the individual weight distributions for you!
+                            ''')
+                    st.space("xxsmall")
+                    must_pass = st.toggle("Must Pass Component")
                 
                 if st.form_submit_button("Create Assessment"):
                     if module_code and title and weeks:
