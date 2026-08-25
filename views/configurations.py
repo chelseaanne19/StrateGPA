@@ -64,6 +64,7 @@ def confirm_assessment_submission(module_code, title, percentage, must_pass, wee
     st.warning("Please review assessment information carefully before submitting.")
     st.write(f"**Module Code:** {module_code}")
     st.write(f"**Assignment Title:** {title}")
+    st.write(f"**Weeks Due:** {" ,".join(map(str, weeks_list))}")
     st.write(f"**Weighting:** {percentage}%")
     st.write(f"**Must Pass:** {'Yes' if must_pass else 'No'}")
     st.write("Is everything correct?")
