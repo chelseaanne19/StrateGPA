@@ -314,7 +314,7 @@ def update_module(old_code, new_code, new_title, new_trimester):
         return False
 
 # UPDATE ASSESSMENT
-def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_weeks_list):
+def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
