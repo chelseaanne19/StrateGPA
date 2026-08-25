@@ -5,9 +5,11 @@ import pandas as pd
 from database import (
     table_setup, get_modules_dataframe, get_assessments_dataframe,
     insert_module, delete_module, update_module,
-    insert_assessment, delete_assessment, update_assessment
+    insert_assessment, delete_assessment, update_assessment,
+    get_user_settings
 )
 
+user_profile = get_user_settings()
 
 # session state flags for dialog windows
 if "trigger_edit" not in st.session_state:
@@ -291,7 +293,7 @@ def render_assessment_section():
                             StrateGPA will automatically split them into separate tracking items and handle
                             the individual weight distributions for you!
                             ''')
-                    st.space("xxsmall")
+                    st.space("small")
                     must_pass = st.toggle("Must Pass Component")
                 
                 if st.form_submit_button("Create Assessment"):

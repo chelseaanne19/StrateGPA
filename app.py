@@ -48,12 +48,13 @@ if user_profile is None:
                 st.error("Please fill in fields correctly.")
 else:
     config_page = st.Page("views/configurations.py", title = "Module and Assessment Registration", icon = "➕")
+    grades_page = st.Page("views/grades_entry.py", title = "Grade Entry", icon = "➕")
     dashboard_page = st.Page("views/dashboard.py", title = "Weekly Workload", icon = "🍡")
 
     pg = st.navigation(
         {
             f"🏫 {user_profile['institution']}": [dashboard_page],
-                  "System Management": [config_page]
+                  "System Management": [config_page, grades_page]
         }
     )
 

@@ -212,7 +212,22 @@ def get_assessments_dataframe():
 
     return df
 
-
+# FETCHES ASSESSMENTS OF A CERTAIN MODULE
+def get_assessments_from(module_code):
+    with sqlite3.connect(DB_NAME) as conn:
+        query = '''
+                SELECT
+                    id,
+                    assessment_title,
+                    assessment_percentage,
+                    week,
+                    received_grade
+                FROM assessments
+                WHERE module_code = ?
+                ORDER BY week ASC, id ASC
+                '''
+        df = pd.read_sql_query(query, conn, params = (module_code,))
+    return df
 
 # INSERT MODULE
 def insert_module(code_input, title_input, trimester_input):
