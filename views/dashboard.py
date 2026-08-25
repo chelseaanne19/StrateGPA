@@ -76,10 +76,23 @@ with col1:
 
 with col2:
     with st.container(border = True):
+        total = progress["total_weight"]
+
+        if total == 100:
+            delta_msg = "Syllabus fully configured (100%)"
+            delta_color = "normal"
+        elif total < 100:
+            delta_msg = f"Syllabus incomplete: {total:.1f}% / 100%"
+            delta_color = "inverse"
+        else:
+            delta_msg = f"Syllabus exceeds 100% ({total:.1f}%). \n\n **Please fix assessment weightings**."
+            delta_color = "inverse"
+        
         st.metric(
             label = "Upcoming Marks / Grades",
             value = f"{progress['upcoming_weight']:.1f}% Available",
-            delta = f"Total Syllabus Configured: {progress['total_weight']:.1f}%" # should be 100%
+            delta = delta_msg,
+            delta_color = delta_color
         )
 
 
