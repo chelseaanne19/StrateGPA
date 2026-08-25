@@ -79,7 +79,7 @@ with col2:
         st.metric(
             label = "Upcoming Marks / Grades",
             value = f"{progress['upcoming_weight']:.1f}% Available",
-            delta = f"Total Syllabus Configured: {progress['total_weight']:.1f}%"
+            delta = f"Total Syllabus Configured: {progress['total_weight']:.1f}%" # should be 100%
         )
 
 
@@ -95,7 +95,7 @@ with col3:
 
         st.metric(
             label = f"Week {active_week} Focus",
-            value = f"{week_load:.1f}% Due" if week_load > 0 else "Calm Week",
+            value = f"{week_load:.1f}% Due" if week_load > 0 else "No assessments due!",
         )
 
 
@@ -152,7 +152,7 @@ st.write("____")
 #################
 # WEEKLY AGENDA
 #################
-st.write(f"Agenda: Week {active_week}")
+st.write(f"### Agenda: Week {active_week}")
 tab_contributors, tab_agenda = st.tabs(["Module Contributors", "Week Tasks"])
 
 
@@ -161,9 +161,9 @@ with tab_contributors:
     if df_contributors.empty:
         st.info(f"Week {active_week} is clear!")
     else:
-        st.write(f"#### Important Modules for Week {active_week}")
+        st.write("#### Important Modules")
         for idx, row in df_contributors.iterrows():
-            st.markdown(f"**{row['Module Code']}** - *{row['Module Title']}* : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
+            st.markdown(f":yellow[**{row['Module Code']}** - *{row['Module Title']}*] : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
             st.progress(float(row['Contribution (%)']) / 100.0)
 
 with tab_agenda:
@@ -182,7 +182,7 @@ with tab_agenda:
             is_graded = pd.notna(current_grade)
 
             grade_status = f"Graded: {current_grade:.1f}%" if is_graded else "Grade Pending ...."
-            with st.expander(f"{mod_code} - {title} ({weight:.0f}%)  |  {grade_status}"):
+            with st.expander(f":yellow[{mod_code}]  |  {title}  |  ({weight:.0f}%)  |  {grade_status}"):
                 st.markdown(f"**Task:** {title}")
                 st.markdown(f"**Grade Impact:** Contributes **{weight:.1f}%** towards module.")
                 if must_pass == 1:
