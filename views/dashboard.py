@@ -181,10 +181,11 @@ with tab_agenda:
             current_grade = row["Received Grade"]
             is_graded = pd.notna(current_grade)
 
+            # variable for spacing
+            s = "\u00A0"
+
             grade_status = f"Graded: {current_grade:.1f}%" if is_graded else "Grade Pending ...."
-            with st.expander(f":yellow[{mod_code}]  |  {title}  |  ({weight:.0f}%)  |  {grade_status}"):
-                st.markdown(f"**Task:** {title}")
-                st.markdown(f"**Grade Impact:** Contributes **{weight:.1f}%** towards module.")
+            with st.expander(f":yellow[**{title}**]{s*4}|{s*4}**{weight:.0f}%** of **{mod_code}**{s*4}|{s*4}{grade_status}"):
                 if must_pass == 1:
                     st.error("**MUST PASS THIS ASSESSMENT**")
 
