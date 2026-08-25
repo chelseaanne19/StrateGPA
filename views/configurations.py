@@ -240,7 +240,7 @@ def render_assessment_section():
     with col_form:
         with st.container(border = True):
             st.markdown("#### Create Assessments Here")
-            with st.form("new_assessment_form"):
+            with st.form("new_assessment_form", clear_on_submit = True):
                 module_options = df_modules["Module Code"].tolist() if not df_modules.empty else []
                 module_code = st.selectbox("Assign Module Code", options = module_options, key = "new_module_code")
                 title = st.text_input("Enter Assessment Title", placeholder = "e.g. In Class Test, MCQ, Group Project")
