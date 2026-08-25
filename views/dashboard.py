@@ -31,7 +31,7 @@ active_week = st.session_state.current_week
 #
 #_______________________
 st.title("Performance Dashboard")
-st.caption("Track grade progress and workloads ccordingly")
+st.caption("Track grade progress and workloads accordingly")
 st.write("____")
 
 
