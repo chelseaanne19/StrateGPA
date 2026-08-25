@@ -6,6 +6,7 @@ from database import (
     get_week_agenda, update_assessment_grade,
     get_user_settings
 )
+import plotly.express as px
 
 st.set_page_config(page_title = "Dashboard", layout = "wide")
 
@@ -114,13 +115,34 @@ else:
 if chart_df["Total Workload (%)"].sum() == 0:
     st.info("No active assessments located for this dashboard filter.")
 else:
-    st.bar_chart(
-        data = chart_df,
+    chart_df["Colour Scale"] = chart_df["Total Workload (%)"] / 100.0
+
+    fig = px.bar(
+        chart_df,
         x = "Week",
         y = "Total Workload (%)",
-        color = "#f5d742",
-        use_container_width = True
+        color = "Colour Scale",
+        color_continuous_scale = [
+            (0.0, "#2ecc71"),
+            (0.4, "#f39c12"),
+            (0.8, "#e74c3c"),
+            (1.0, "#e74c3c")
+        ],
+        labels = {"Week": "Academic Week Number", "Total Workload (%)": "Total Workload (%)"},
     )
+
+    fig.update_layout(
+        height = 400,
+        margin = dict(l = 20, r = 20, t = 20, b = 20),
+        xaxis = dict(tickmode = "linear", tick0 = 1, dtick = 1, fixedrange = True),
+        yaxis = dict(fixedrange = True),
+        coloraxis_colorbar = dict(title = "Stress Index"),
+        dragmode = False
+    )
+
+    chart_config = {"displayModeBar": False, "scrollZoom": False}
+
+    st.plotly_chart(fig, use_container_width = True, config = chart_config)
 
 st.write("____")
 
