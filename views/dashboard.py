@@ -147,7 +147,7 @@ with tab_agenda:
     if df_agenda.empty:
         st.info(f"Week {active_week} is clear!")
     else:
-        st.write(f"#### Tasks for week {active_week}")
+        st.write("#### Tasks")
         for idx, row in df_agenda.iterrows():
             ass_id = int(row['Assessment ID'])
             mod_code = row['Module Code']
@@ -164,23 +164,24 @@ with tab_agenda:
                 if must_pass == 1:
                     st.error("**MUST PASS THIS ASSESSMENT**")
 
-                with st.form(key = f"grade_form_{ass_id}"):
-                    default_val = float(current_grade) if is_graded else 0.0
-                    new_grade_score = st.number_input(
-                        "Enter achieved score (0.0 -> 100.0):",
-                        min_value = 0.0,
-                        max_value = 100.0,
-                        value = default_val,
-                        step = 0.5,
-                        key = f"grade_input_{ass_id}"
-                    )
-
-                    col_save, col_clear = st.columns(2)
-                    with col_save:
-                        if st.form_submit_button("Save Grade Score", use_container_width = True, type = "primary"):
-                            update_assessment_grade(ass_id, new_grade_score)
-                            st.rerun()
-                    with col_clear:
-                        if st.form_submit_button("Clear Grade", use_container_width = True):
-                            update_assessment_grade(ass_id, None)
-                            st.rerun()
+                with st.expander("Log Grade"):
+                    with st.form(key = f"grade_form_{ass_id}"):
+                        default_val = float(current_grade) if is_graded else 0.0
+                        new_grade_score = st.number_input(
+                            "Enter achieved score (0.0 -> 100.0):",
+                            min_value = 0.0,
+                            max_value = 100.0,
+                            value = default_val,
+                            step = 0.5,
+                            key = f"grade_input_{ass_id}"
+                        )
+    
+                        col_save, col_clear = st.columns(2)
+                        with col_save:
+                            if st.form_submit_button("Save Grade Score", use_container_width = True, type = "primary"):
+                                update_assessment_grade(ass_id, new_grade_score)
+                                st.rerun()
+                        with col_clear:
+                            if st.form_submit_button("Clear Grade", use_container_width = True):
+                                update_assessment_grade(ass_id, None)
+                                st.rerun()
