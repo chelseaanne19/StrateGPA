@@ -137,7 +137,7 @@ with tab_contributors:
     if df_contributors.empty:
         st.info(f"Week {active_week} is clear!")
     else:
-        st.write("#### Important Modules for Week {active_week}")
+        st.write(f"#### Important Modules for Week {active_week}")
         for idx, row in df_contributors.iterrows():
             st.markdown(f"**{row['Module Code']}** - *{row['Module Title']}* : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
             st.progress(float(row['Contribution (%)']) / 100.0)
