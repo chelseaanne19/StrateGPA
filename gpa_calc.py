@@ -1,3 +1,7 @@
+import sqlite3
+import pandas as pd
+from database import DB_NAME, get_user_settings
+
 def convert_ucd_mark_to_grade(percentage, scale_type = "Standard 40% Pass"):
     """
     translates percentage score into matching UCD letter grades and gpa points
@@ -76,3 +80,87 @@ def convert_ucd_mark_to_grade(percentage, scale_type = "Standard 40% Pass"):
         else: return "F", 1.0
 
     return "D-", 2.0
+
+def convert_us_mark_to_grade(percentage):
+
+    if percentage >= 93.0: return "A", 4.0
+    elif percentage >= 90.0: return "A-", 3.7
+    elif percentage >= 87.0: return "B+", 3.3
+    elif percentage >= 83.0: return "B", 3.0
+    elif percentage >= 80.0: return "B-", 2.7
+    elif percentage >= 77.0: return "C+", 2.3
+    elif percentage >= 73.0: return "C", 2.0
+    elif percentage >= 70.0: return "C-", 1.7
+    elif percentage >= 67.0: return "D+", 1.3
+    elif percentage >= 65.0: return "D", 1.0
+    else: return "F", 0.0
+
+def convert_percentage_to_grade(percentage):
+
+    if percentage >= 70.0: return "1st", percentage
+    elif percentage >= 60.0: return "2:1", percentage
+    elif percentage >= 50.0: return "2:2", percentage
+    elif percentage >= 40.0: return "Pass", percentage
+    else: return "Fail", percentage
+
+
+def calculate_running_module_score(module_code):
+    '''
+    gets assessments from certain module that have been graded,
+    calculates running score,
+    returns dict with raw percentage, corresponding letter grade, gpa value
+    '''
+
+    user_profile = get_user_settings()
+    system = user_profile["system"]
+
+    with sqlite3.connect(DB_NAME) as conn:
+        query = '''
+                SELECT
+                    assessment_percentage,
+                    received_grade,
+                    component_scale
+                FROM assessments
+                WHERE module_code = ?
+                '''
+
+        df = pd.read_sql_query(query, conn, params = (module_code,))
+
+    if df.empty:
+        return {"percentage" : 0.0, "letter" : "NG", "points" : 0.0, "completed_weight" : 0.0}
+
+
+
+    completed_weight = 0
+    points = 0
+
+    for idx, row in df.iterrows():
+        weight = float(row["assessment_percentage"])
+        grade = float(row["received_grade"])
+
+        if pd.notna(grade):
+            completed_weight += weight
+            points += weight * (float(grade) / 100.0)
+
+
+    if completed_weight == 0:
+        return {"percentage" : 0.0, "letter" : "Pending", "points": 0.0, "completed_weight" : 0.0}
+
+
+    running_percentage = (points / completed_weight) * 100.0
+
+    if "UCD" in system:
+        scale = df["Component Scale"].iloc[0] if not df["Component Scale"].empty else "standard 40% Pass"
+        letter_grade, gpa_points = convert_ucd_mark_to_grade(running_percentage, scale_type = scale)
+    elif "US" in system:
+        letter_grade, gpa_points = convert_us_mark_to_grade(running_percentage)
+    else:
+        letter_grade, gpa_points = convert_percentage_to_grade(running_percentage)
+
+
+    return {
+        "percentage" : running_percentage,
+        "letter" : letter_grade,
+        "points" : gpa_points,
+        "completed_weight" : completed_weight
+    }
