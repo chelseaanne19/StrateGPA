@@ -62,13 +62,14 @@ def confirm_module_submission(module_code, module_title, trimester):
                 st.error("A module with this **code** or **title** *already exists* in your database.")
 
 @st.dialog("Confirm Assessment Details")
-def confirm_assessment_submission(module_code, title, percentage, must_pass, weeks_list):
+def confirm_assessment_submission(module_code, title, percentage, must_pass, weeks_list, component_scale):
     st.warning("Please review assessment information carefully before submitting.")
     st.write(f"**Module Code:** {module_code}")
     st.write(f"**Assignment Title:** {title}")
     st.write(f"**Weeks Due:** {" ,".join(map(str, weeks_list))}")
     st.write(f"**Weighting:** {percentage}%")
     st.write(f"**Must Pass:** {'Yes' if must_pass else 'No'}")
+    st.write(f"**Component Scale:** {component_scale}")
     st.write("Is everything correct?")
 
     no, yes = st.columns([1, 1])
@@ -78,7 +79,7 @@ def confirm_assessment_submission(module_code, title, percentage, must_pass, wee
     with yes:
         if st.button("Yes, Submit", use_container_width = True, key = "confirm_assessment_submission"):
             must_pass_int = 1 if must_pass else 0
-            success = insert_assessment(module_code, title, percentage, must_pass_int, weeks_list)
+            success = insert_assessment(module_code, title, percentage, must_pass_int, weeks_list, component_scale)
             if success:
                 st.success(f"{title} Created Successfully!")
                 st.rerun()
@@ -125,11 +126,14 @@ def edit_assessment_submission(assessment_id):
     orig_code = resulting_row["Module Code"].values[0]
     orig_percentage = int(resulting_row["Weight %"].values[0])
     orig_week = int(resulting_row["Week Due"].values[0])
+    orig_component_scale = resulting_row["Component Scale"].values[0]
     orig_must_pass = resulting_row["Must Pass"].values[0]
     bool_must_pass = True if orig_must_pass == "Yes" else False
 
     module_list = df_modules["Module Code"].tolist() if not df_modules.empty else [orig_code]
     code_index = module_list.index(orig_code) if orig_code in module_list else 0
+    scale_list = ["Standard 40% Pass", "Alternative Linear 40% Pass", "Alternative Non-Linear 50% Pass", "Alternative 60% Pass"]
+    scale_index = scale_list.index(orig_component_scale) if orig_component_scale in scale_list else 0
 
     with st.form("edit_assessment_form"):
         new_title = st.text_input("Enter new assessment title:", value = orig_title, key = "new_ass_title")
@@ -137,12 +141,13 @@ def edit_assessment_submission(assessment_id):
         new_percentage = st.slider("Enter correct weighting:", 0, 100, value = orig_percentage, key = "new_ass_weighting")
         new_must_pass = st.toggle("Must Pass Component", value = bool_must_pass, key = "new_must_pass")
         new_week = st.selectbox("Select correct week assessment is due:", options = list(range(1, 18)), index = orig_week - 1, key = "new_ass_weeks_list")
+        new_component_scale = st.selectbox("Select correct component scale:", options = scale_list, index = scale_index, key = "new_component_scale")
 
         if st.form_submit_button("Confirm Assessment Details", key = "confirm_assessment_details"):
             if new_title.strip() and new_code and new_week:
                 must_pass_int = 1 if new_must_pass else 0
 
-                success = update_assessment(assessment_id, new_code, new_title.strip(), new_percentage, must_pass_int, new_week)
+                success = update_assessment(assessment_id, new_code, new_title.strip(), new_percentage, must_pass_int, new_week, new_component_scale)
 
                 if success:
                     st.session_state.trigger_edit_assessment = False
@@ -249,7 +254,7 @@ def render_assessment_section():
             module_code = st.selectbox("Assign Module Code for Assessment", options = module_options, key = "new_module_code")
 
             if not df_modules.empty and module_code:
-                current_trimester = df_modules[df["Module Code"] == module_code]["Trimester"].values[0]
+                current_trimester = df_modules[df_modules["Module Code"] == module_code]["Trimester"].values[0]
             else:
                 current_trimester = "Autumn"
 
@@ -267,7 +272,7 @@ def render_assessment_section():
 
             # form submission
             with st.form("new_assessment_form", clear_on_submit = True):
-                tab_title, tab_weeks, tab_weightings = st.tabs(["Title", "Weeks", "Weightings"])
+                tab_title, tab_weeks, tab_weightings, tab_scales = st.tabs(["Title", "Weeks", "Weightings", "Component Scale"])
 
                 with tab_title:
                     title = st.text_input("**Assessment Title**", placeholder = "e.g. In Class Test, MCQ, Group Project")
@@ -295,10 +300,23 @@ def render_assessment_section():
                             ''')
                     st.space("small")
                     must_pass = st.toggle("Must Pass Component")
+
+                with tab_scales:
+                    selected_scale = "Standard 40% Pass"
+
+                    if user_profile and "UCD" in user_profile["system"]:
+                        st.write("UCD Mark To Grade Component Scales")
+
+                        selected_scale = st.selectbox(
+                        "Select component scale associated for this assessment",
+                        options = ["Standard 40% Pass", "Alternative linear 40% Pass", "Alternative Non-Linear 40% Pass", "Alternative Linear 60% Pass"],
+                        help = "If unsure, visit the module's website -> 'How will I be assessed' -> 'Assessment Strategy' -> 'Component Scale'")
+
+                        st.caption("If unsure about which scale applies, please refer to the **Assessment Strategy** section on your module's official webpage or Brightspace!")
                 
                 if st.form_submit_button("Create Assessment"):
                     if module_code and title and weeks:
-                        confirm_assessment_submission(module_code, title, percentage, must_pass, weeks)
+                        confirm_assessment_submission(module_code, title, percentage, must_pass, weeks, selected_scale)
                     else:
                         st.error("Please fill in all fields.")
 

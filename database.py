@@ -34,6 +34,7 @@ def table_setup():
                         must_pass_component INTEGER NOT NULL,
                         week INTEGER NOT NULL,
                         received_grade REAL DEFAULT NULL,
+                        component_scale TEXT NOT NULL DEFAULT "Standard 40% Pass",
                         FOREIGN KEY (module_code) REFERENCES modules (module_code)
                         ON DELETE CASCADE
                         ON UPDATE CASCADE
@@ -203,7 +204,8 @@ def get_assessments_dataframe():
                     ELSE 'No'
                     END AS 'Must Pass',
                     week AS 'Week Due',
-                    CASE WHEN received_grade IS NOT NULL THEN PRINTF('%.1f%%', received_grade) ELSE 'Pending' END AS 'Result'
+                    CASE WHEN received_grade IS NOT NULL THEN PRINTF('%.1f%%', received_grade) ELSE 'Pending' END AS 'Result',
+                component_scale AS 'Component Scale'
                 FROM assessments
                 ORDER BY week ASC, module_code ASC
                 '''
@@ -221,7 +223,8 @@ def get_assessments_from(module_code):
                     assessment_title,
                     assessment_percentage,
                     week,
-                    received_grade
+                    received_grade,
+                    component_scale
                 FROM assessments
                 WHERE module_code = ?
                 ORDER BY week ASC, id ASC
@@ -254,7 +257,7 @@ def insert_module(code_input, title_input, trimester_input):
         return False
 
 # INSERT ASESSMENT
-def insert_assessment(module_code, title, percentage, must_pass, weeks_list):
+def insert_assessment(module_code, title, percentage, must_pass, weeks_list, component_scale = "Standard 40% Pass"):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
@@ -280,16 +283,18 @@ def insert_assessment(module_code, title, percentage, must_pass, weeks_list):
                                 assessment_percentage,
                                 must_pass_component,
                                 week,
-                                received_grade)
+                                received_grade,
+                                component_scale)
                             VALUES
-                                (?, ?, ?, ?, ?, NULL)
+                                (?, ?, ?, ?, ?, NULL, ?)
                             ''',
                             (
                                 module_code,
                                 display_title,
                                 row_weight,
                                 must_pass,
-                                week_num
+                                week_num,
+                                component_scale
                             )
                             )
             conn.commit()
@@ -329,7 +334,7 @@ def update_module(old_code, new_code, new_title, new_trimester):
         return False
 
 # UPDATE ASSESSMENT
-def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week):
+def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week, component_scale = "Standard 40% Pass"):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
@@ -342,7 +347,8 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
                             assessment_title = ?,
                             assessment_percentage = ?,
                             must_pass_component = ?,
-                            week = ?
+                            week = ?,
+                            component_scale = ?
                         WHERE
                             id = ?
                         ''',
@@ -352,6 +358,7 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
                             new_percentage,
                             new_must_pass,
                             new_week,
+                            component_scale,
                             assessment_id
                         )
                         )
