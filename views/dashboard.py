@@ -144,6 +144,11 @@ else:
         ],
         range_color = [0, 1],
         labels = {"Week": "Academic Week Number", "Total Workload (%)": "Total Workload (%)"},
+        hover_data = {
+            "Week": False,
+            "Total Workload (%)": True,
+            "Module": True
+        }
     )
 
     fig.update_layout(
