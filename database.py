@@ -34,7 +34,7 @@ def table_setup():
                         must_pass_component INTEGER NOT NULL,
                         week INTEGER NOT NULL,
                         received_grade REAL DEFAULT NULL,
-                        component_scale TEXT NOT NULL DEFAULT "Standard 40% Pass",
+                        component_scale TEXT DEFAULT "Standard 40% Pass",
                         FOREIGN KEY (module_code) REFERENCES modules (module_code)
                         ON DELETE CASCADE
                         ON UPDATE CASCADE
@@ -257,7 +257,7 @@ def insert_module(code_input, title_input, trimester_input):
         return False
 
 # INSERT ASESSMENT
-def insert_assessment(module_code, title, percentage, must_pass, weeks_list, component_scale = "Standard 40% Pass"):
+def insert_assessment(module_code, title, percentage, must_pass, weeks_list, component_scale = None):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
@@ -334,7 +334,7 @@ def update_module(old_code, new_code, new_title, new_trimester):
         return False
 
 # UPDATE ASSESSMENT
-def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week, component_scale = "Standard 40% Pass"):
+def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week, component_scale = None):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
