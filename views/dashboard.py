@@ -179,7 +179,7 @@ with tab_contributors:
     else:
         st.write("#### Important Modules")
         for idx, row in df_contributors.iterrows():
-            st.markdown(f":yellow[**{row['Module Code']}** - *{row['Module Title']}*] : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
+            st.markdown(f":blue[**{row['Module Code']}** - *{row['Module Title']}*] : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
             st.progress(float(row['Contribution (%)']) / 100.0)
 
 with tab_agenda:
@@ -201,7 +201,7 @@ with tab_agenda:
             s = "\u00A0"
 
             grade_status = f"Graded: {current_grade:.1f}%" if is_graded else "Grade Pending ...."
-            with st.expander(f":yellow[**{title}**]{s*4}|{s*4}**{weight:.0f}%** of **{mod_code}**{s*4}|{s*4}{grade_status}"):
+            with st.expander(f":blue[**{title}**]{s*4}|{s*4}**{weight:.0f}%** of **{mod_code}**{s*4}|{s*4}{grade_status}"):
                 if must_pass == 1:
                     st.error("**MUST PASS THIS ASSESSMENT**")
 
