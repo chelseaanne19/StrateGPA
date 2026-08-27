@@ -128,8 +128,6 @@ else:
 if chart_df["Total Workload (%)"].sum() == 0:
     st.info("No active assessments located for this dashboard filter.")
 else:
-    chart_df["Colour Scale"] = chart_df["Total Workload (%)"] / 100.0
-
     fig = px.bar(
         chart_df,
         x = "Week",
