@@ -134,7 +134,7 @@ else:
         chart_df,
         x = "Week",
         y = "Total Workload (%)",
-        color = "Colour Scale",
+        color = "Total Workload (%)",
         color_continuous_scale = [
             (0.0, "#2ecc71"),
             (0.4, "#f39c12"),
@@ -142,7 +142,7 @@ else:
             (0.8, "#e74c3c"),
             (1.0, "#e74c3c")
         ],
-        range_color = [0, 1],
+        range_color = [0, 100],
         labels = {"Week": "Academic Week Number", "Total Workload (%)": "Total Workload (%)"},
         hover_data = {
             "Week": False,
