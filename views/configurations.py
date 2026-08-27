@@ -306,7 +306,7 @@ def render_assessment_section():
                     st.space("small")
                     must_pass = st.toggle("Must Pass Component")
 
-                if "UCD" in user_profile["system]:
+                if "UCD" in user_profile["system"]:
                     with tab_scales:
                         selected_scale = "Standard 40% Pass"
 
