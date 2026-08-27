@@ -43,9 +43,9 @@ df_assessments = get_assessments_dataframe()
 @st.dialog("Confirm Module Details")
 def confirm_module_submission(module_code, module_title, trimester):
     st.warning("Please review module information carefully before submitting.")
-    st.write(f"**Module Code:** {module_code}")
-    st.write(f"**Module Title:** {module_title}")
-    st.write(f"**Trimester:** {trimester}")
+    st.write(f"Module Code: **{module_code}**")
+    st.write(f"Module Title: **{module_title}**")
+    st.write(f"Trimester: **{trimester}**")
     st.write("Is everything correct?")
 
     no, yes = st.columns([1, 1])
@@ -64,13 +64,13 @@ def confirm_module_submission(module_code, module_title, trimester):
 @st.dialog("Confirm Assessment Details")
 def confirm_assessment_submission(module_code, title, percentage, must_pass, weeks_list, component_scale = None):
     st.warning("Please review assessment information carefully before submitting.")
-    st.write(f"**Module Code:** {module_code}")
-    st.write(f"**Assignment Title:** {title}")
-    st.write(f"**Weeks Due:** {" ,".join(map(str, weeks_list))}")
-    st.write(f"**Weighting:** {percentage}%")
-    st.write(f"**Must Pass:** {'Yes' if must_pass else 'No'}")
+    st.write(f"Module Code: **{module_code}**")
+    st.write(f"Assignment Title: **{title}**")
+    st.write(f"Weeks Due: **{" ,".join(map(str, weeks_list))}**")
+    st.write(f"Weighting: **{percentage}%**")
+    st.write(f"Must Pass: **{'Yes' if must_pass else 'No'}**")
     if component_scale:
-        st.write(f"**Component Scale:** {component_scale}")
+        st.write(f"Component Scale: **{component_scale}**")
     st.write("Is everything correct?")
 
     no, yes = st.columns([1, 1])
@@ -78,7 +78,7 @@ def confirm_assessment_submission(module_code, title, percentage, must_pass, wee
         if st.button("No, Go Back", use_container_width = True, key = "unconfirm_assessment_submission"):
             st.rerun()
     with yes:
-        if st.button("Yes, Submit", use_container_width = True, key = "confirm_assessment_submission"):
+        if st.button("Yes, Submit", use_container_width = True, key = "confirm_assessment_submission", type = "primary"):
             must_pass_int = 1 if must_pass else 0
             success = insert_assessment(module_code, title, percentage, must_pass_int, weeks_list, component_scale = component_scale)
             if success:
