@@ -95,7 +95,7 @@ def convert_us_mark_to_grade(percentage):
     elif percentage >= 65.0: return "D", 1.0
     else: return "F", 0.0
 
-def convert_percentage_to_grade(percentage):
+def convert_percentage_to_class(percentage):
 
     if percentage >= 70.0: return "1st", percentage
     elif percentage >= 60.0: return "2:1", percentage
@@ -103,8 +103,36 @@ def convert_percentage_to_grade(percentage):
     elif percentage >= 40.0: return "Pass", percentage
     else: return "Fail", percentage
 
+def get_ucd_letter_from_points(points):
+    if points >= 4.10: return "A+"
+    elif points >= 3.90: return "A"
+    elif points >= 3.70: return "A-"
+    elif points >= 3.50: return "B+"
+    elif points >= 3.30: return "B"
+    elif points >= 3.10: return "B-"
+    elif points >= 2.90: return "C+"
+    elif points >= 2.70: return "C"
+    elif points >= 2.50: return "C-"
+    elif points >= 2.30: return "D+"
+    elif points >= 2.10: return "D"
+    elif points >= 2.00: return "D-"
+    elif points >= 1.50: return "E"
+    else: return "F"
 
-def calculate_running_module_score(module_code):
+def get_us_letter_from_points(points):
+    if points >= 3.85: return "A"
+    elif points >= 3.50: return "A-"
+    elif points >= 3.15: return "B+"
+    elif points >= 2.85: return "B"
+    elif points >= 2.50: return "B-"
+    elif points >= 2.15: return "C+"
+    elif points >= 1.85: return "C"
+    elif points >= 1.50: return "C-"
+    elif points >= 1.15: return "D+"
+    elif points >= 1.00: return "D"
+    else: return "F"
+
+def calculate_module_gpa(module_code):
     '''
     gets assessments from certain module that have been graded,
     calculates running score,
@@ -164,3 +192,179 @@ def calculate_running_module_score(module_code):
         "points" : gpa_points,
         "completed_weight" : completed_weight
     }
+
+def calculate_module_gpa(module_code):
+    '''
+    gets assessments from certain module that have been graded,
+    calculates running score,
+    returns dict with raw percentage, corresponding letter grade, gpa value
+    '''
+
+    user_profile = get_user_settings()
+    system = user_profile["system"]
+    
+    
+    with sqlite3.connect(DB_NAME) as conn:
+        query = '''
+                SELECT
+                    assessment_percentage,
+                    received_grade,
+                    component_scale
+                FROM assessments
+                WHERE module_code = ?
+                '''
+        
+        df = pd.read_sql_query(query, conn, params = (module_code,))
+        
+    
+    if df.empty:
+        return {"Module Average": 0.0, "Letter_Grade" : "NG", "Module GPA": 0.0, "Weight Graded": 0.0}
+    
+    
+    ##### RUNNING MODULE PERCENTAGES    
+    # mcq: worth 20%, scored 90%
+    # lab quiz: worth 80%, scored 95%
+    # format: [assessment_percentage], [received_grade]
+    
+    earned_assessment_percentage = 0.0
+    total_assessment_percentage = 0.0
+    module_gpa_points = 0.0
+    
+    for idx, row in df.iterrows():
+        assessment_percentage = row["assessment_percentage"]
+        received_grade = row["received_grade"]
+        component_scale = row["component_scale"]
+        
+        # running percentages
+        if pd.notna(received_grade):
+            percentage_of_module = received_grade * (assessment_percentage / 100.0)
+            earned_assessment_percentage += percentage_of_module
+            total_assessment_percentage += assessment_percentage
+        
+            # gpa calculations FOR assessment only
+            if "UCD" in system:
+                _, assessment_gpa_points = convert_ucd_mark_to_grade(received_grade, scale_type = component_scale)
+                module_gpa_points += assessment_gpa_points * assessment_percentage
+            elif "US" in system:
+                _, assessment_gpa_points = convert_us_mark_to_grade(received_grade)
+                module_gpa_points += assessment_gpa_points * assessment_percentage
+                  
+    
+    if total_assessment_percentage == 0:
+        return {"Module Average" : 0.0, "Letter_Grade": "Pending", "Module GPA": 0.0, "Weight Graded": 0.0}
+    
+    
+    final_running_percentage = (earned_assessment_percentage / total_assessment_percentage) * 100
+    
+    
+    if "Percentage" in system:
+        final_module_gpa = final_running_percentage
+        final_letter = convert_percentage_to_class(final_running_percentage)
+    else:
+        final_module_gpa = module_gpa_points / total_assessment_percentage
+        
+        if "UCD" in system:
+            final_letter = get_ucd_letter_from_points(final_module_gpa)
+        else:
+            final_letter = get_us_letter_from_points(final_module_gpa)
+    
+    return {
+        "Module Average" : final_running_percentage,
+        "Letter_Grade" : final_letter,
+        "Module GPA" : round(final_module_gpa, 2),
+        "Weight Graded" : total_assessment_percentage,
+        
+        "Evaluation Status" : "Fully Assessed" if total_assessment_percentage >= 100 else "Some graded assessments have yet to be registered.",
+        "Performance Status" : "Finalised Grade" if total_assessment_percentage >= 100 else "Provisional Grade, subject to improvement."
+        }
+
+def calculate_semester_gpa(trimester):
+    # get modules table to get all courses for term
+    # loop through modules to get module gpa
+    # get grade and gpa and honours etc.
+    
+    user_profile = get_user_settings()
+    system = user_profile["system"]
+    
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+        
+        cur.execute('''
+                    SELECT
+                        module_code
+                    FROM
+                        modules
+                    WHERE
+                        trimester = ?
+                    ''',
+                    (trimester,)
+                    )
+        
+        rows = cur.fetchall()
+
+    if not rows:
+        return {
+            "overall_score" : 0.0,
+            "classification" : "No Registered Modules Located.",
+            "modules_tracked" : 0,
+            "modules_graded" : 0
+            }
+    
+    total_module_count = len(rows)
+    modules_with_grades = 0
+    accumulated_gpa_points = 0.0
+    accumulated_raw_percentage = 0.0
+    
+    for row in rows:
+        mod_code = row[0]
+        scores = calculate_module_gpa(mod_code)
+        
+        if scores["Letter_Grade"] != "NG" and scores["Letter_Grade"] != "Pending":
+            modules_with_grades += 1
+            accumulated_gpa_points += float(scores["Module GPA"])
+            accumulated_raw_percentage += float(scores["Module Average"])
+    
+    if modules_with_grades == 0:
+        return {
+            "overall_score" : 0.0,
+            "classification": "Awaiting Grades",
+            "modules_tracked" : total_module_count,
+            "modules_graded" : 0
+            }
+    
+
+    if "Percentage" in system:
+        overall_score = accumulated_raw_percentage / modules_with_grades
+        
+        if overall_score >= 70.0: classification_badge = "First Class Honours (1st)"
+        elif overall_score >= 60.0: classification_badge = "Second Class Honours, Grade 1 (1:1)"
+        elif overall_score >= 50.0: classification_badge = "Second Class Honours, Grade 2 (2:2)"
+        elif overall_score >= 40.0: classification_badge = "Pass Degree"
+        else: classification_badge = "Fail"
+    
+    else:
+        overall_score = accumulated_gpa_points / modules_with_grades
+        
+        if "UCD" in system:
+            
+            if overall_score >= 3.68: classification_badge = "First Class Honours (1st)"
+            elif overall_score >= 3.08: classification_badge = "Second Class Honours, Grade 1 (2:1)"
+            elif overall_score >= 2.48: classification_badge = "Second Class Honours, Grade 2 (2:2)"
+            elif overall_score >= 2.00: classification_badge = "Pass Degree"
+            else: classification_badge = "Fail"
+        else:
+            if overall_score >= 3.80: classification_badge = "Summa Cum Laude (Highest Honours)"
+            elif overall_score >= 3.65: classification_badge = "Magna Cum Laude (High Honours)"
+            elif overall_score >= 3.50: classification_badge = "Cum Laude (Honours)"
+            elif overall_score >= 2.00: classification_badge = "Good Academic Standing"
+            else: classification_badge ="Fail"
+    
+    
+
+    return {
+        "overall_score" : round(overall_score, 2),
+        "classification" : classification_badge,
+        "modules_tracked" : total_module_count,
+        "modules_graded" : modules_with_grades
+        }
+
