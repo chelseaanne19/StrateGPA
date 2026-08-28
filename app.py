@@ -47,13 +47,14 @@ if user_profile is None:
             else:
                 st.error("Please fill in fields correctly.")
 else:
-    config_page = st.Page("views/configurations.py", title = "Module and Assessment Registration", icon = "➕")
-    grades_page = st.Page("views/grades_entry.py", title = "Grade Entry", icon = "➕")
-    dashboard_page = st.Page("views/dashboard.py", title = "Weekly Workload", icon = "🍡")
+    config_page = st.Page("views/configurations.py", title = "Module and Assessment Registration", icon = ":material/add:")
+    grades_page = st.Page("views/grades_entry.py", title = "Grade Entry", icon = ":material/add:")
+    dashboard_page = st.Page("views/dashboard.py", title = "Weekly Workload", icon = ":material/event:")
+    gpa_page = st.Page("views/gpa.py", title = "Academic Performance", icon = ":material/add_task:")
 
     pg = st.navigation(
         {
-            f"🏫 {user_profile['institution']}": [dashboard_page],
+            f"🏫 {user_profile['institution']}": [dashboard_page, gpa_page],
                   "System Management": [config_page, grades_page]
         }
     )

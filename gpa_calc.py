@@ -141,67 +141,6 @@ def calculate_module_gpa(module_code):
 
     user_profile = get_user_settings()
     system = user_profile["system"]
-
-    with sqlite3.connect(DB_NAME) as conn:
-        query = '''
-                SELECT
-                    assessment_percentage,
-                    received_grade,
-                    component_scale
-                FROM assessments
-                WHERE module_code = ?
-                '''
-
-        df = pd.read_sql_query(query, conn, params = (module_code,))
-
-    if df.empty:
-        return {"percentage" : 0.0, "letter" : "NG", "points" : 0.0, "completed_weight" : 0.0}
-
-
-
-    completed_weight = 0
-    points = 0
-
-    for idx, row in df.iterrows():
-        weight = float(row["assessment_percentage"])
-        grade = float(row["received_grade"])
-
-        if pd.notna(grade):
-            completed_weight += weight
-            points += weight * (float(grade) / 100.0)
-
-
-    if completed_weight == 0:
-        return {"percentage" : 0.0, "letter" : "Pending", "points": 0.0, "completed_weight" : 0.0}
-
-
-    running_percentage = (points / completed_weight) * 100.0
-
-    if "UCD" in system:
-        scale = df["Component Scale"].iloc[0] if not df["Component Scale"].empty else "standard 40% Pass"
-        letter_grade, gpa_points = convert_ucd_mark_to_grade(running_percentage, scale_type = scale)
-    elif "US" in system:
-        letter_grade, gpa_points = convert_us_mark_to_grade(running_percentage)
-    else:
-        letter_grade, gpa_points = convert_percentage_to_grade(running_percentage)
-
-
-    return {
-        "percentage" : running_percentage,
-        "letter" : letter_grade,
-        "points" : gpa_points,
-        "completed_weight" : completed_weight
-    }
-
-def calculate_module_gpa(module_code):
-    '''
-    gets assessments from certain module that have been graded,
-    calculates running score,
-    returns dict with raw percentage, corresponding letter grade, gpa value
-    '''
-
-    user_profile = get_user_settings()
-    system = user_profile["system"]
     
     
     with sqlite3.connect(DB_NAME) as conn:
@@ -367,4 +306,3 @@ def calculate_semester_gpa(trimester):
         "modules_tracked" : total_module_count,
         "modules_graded" : modules_with_grades
         }
-

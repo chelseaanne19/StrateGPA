@@ -7,8 +7,9 @@ from database import (
     get_user_settings
 )
 import plotly.express as px
+from gpa_calc import calculate_semester_gpa
 
-st.set_page_config(page_title = "Dashboard", layout = "wide")
+st.set_page_config(page_title = "Weekly Workload", layout = "wide")
 
 # __________________
 # SIDEBAR
@@ -30,7 +31,7 @@ active_week = st.session_state.current_week
 # ______________________
 #
 #_______________________
-st.title("Performance Dashboard")
+st.title("Weekly Workload")
 st.caption("Track grade progress and workloads accordingly")
 st.write("____")
 

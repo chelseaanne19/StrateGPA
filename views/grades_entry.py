@@ -47,7 +47,7 @@ else:
                         col_info, col_input = st.columns([1, 1])
                         with col_info:
                             st.write("")
-                            st.markdown(f":yellow[**{a_title}**]: **{weight:.0f}% of module**")
+                            st.markdown(f":blue[**{a_title}**]: **{weight:.0f}% of module**")
 
                             if is_graded:
                                 st.caption(f"Current recorded result: **{current_grade:.1f}**")
