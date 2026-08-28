@@ -12,7 +12,7 @@ st.caption("GPA metrics, track provisional and final grades, learn where work ne
 user_profile = get_user_settings()
 
 
-selected_semester = st.selectbox("Choose semester",
+selected_semester = st.radio("Choose semester",
     options = ["Autumn", "Spring"]
 )
 semester_standings = calculate_semester_gpa(selected_semester)

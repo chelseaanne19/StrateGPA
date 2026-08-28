@@ -86,24 +86,28 @@ def get_user_settings():
     return None
 
 def save_user_settings(institution, system, target, teaching_weeks_autumn, teaching_weeks_spring):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        cur.execute("DELETE FROM settings")
-        cur.execute('''
-                    INSERT INTO settings
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM settings")
+            cur.execute('''
+                        INSERT INTO settings
                         (institution_name,
                         grading_system,
                         target_gpa,
                         teaching_weeks_autumn,
                         teaching_weeks_spring)
-                    VALUES
+                        VALUES
                         (?, ?, ?, ?, ?)
-                    ''',
-                    (
+                        ''',
+                        (
                         (institution, system, target, teaching_weeks_autumn, teaching_weeks_spring)
-                    )
-                    )
-        conn.commit()
+                        )
+                        )
+            conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
 # TO INITIALISE TABLES (testing with hardcoded data (list) before user input is involved)
 def seed_database(MODULES):
