@@ -8,8 +8,46 @@ from database import (
 )
 import plotly.express as px
 from gpa_calc import calculate_semester_gpa
+import streamlit_shadcn_ui as ui
 
 st.set_page_config(page_title = "Weekly Workload", layout = "wide")
+
+
+def shadcn_text(text: str, variant: str = "heading"):
+    variant_styles = {
+        "title": {
+            "class": "shadcn-t-title",
+            "css": "font-size: 44px; font-weight: 700; letter-spacing: -0.05em; color: #09090b; margin-bottom: 16px;"
+        },
+        "heading": {
+            "class": "shadcn-t-heading",
+            "css": "font-size: 24px; font-weight: 600; letter-spacing: -0.025em; color: #09090b; margin-top: 16px; margin-bottom: 8px;"
+        },
+        "subheading": {
+            "class": "shadcn-t-sub",
+            "css": "font-size: 13px; font-weight: 400; color: #71717a; margin-bottom: 12px; line-height: 1.4;"
+        }
+    }
+    
+    style = variant_styles.get(variant, variant_styles["heading"])
+
+    return st.markdown(
+        f"""
+        <style>
+        @import url('https://googleapis.com');
+        .shadcn-base-txt {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }}
+        </style>
+        <div class="shadcn-base-txt" style="{style['css']}">{text}</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+shadcn_text("Weekly Workload", variant = "title")
+shadcn_text("Track upcoming busy weeks and plan accordingly.", variant = "subheading")
+st.write("____")
+
 
 # __________________
 # SIDEBAR
@@ -28,19 +66,12 @@ with st.sidebar:
 
 active_week = st.session_state.current_week
 
-# ______________________
-#
-#_______________________
-st.title("Weekly Workload")
-st.caption("Track grade progress and workloads accordingly")
-st.write("____")
-
 
 # filters
 col_trim, col_mod = st.columns([1, 1])
 
 with col_trim:
-    selected_trimester = st.selectbox("Select trimester:", options = ["Autumn", "Spring"])
+    selected_trimester = ui.select("Trimester:", options = ["Autumn", "Spring"])
 
 
 # get all modules
@@ -54,70 +85,44 @@ else:
 filter_options = ["All Modules"] + trimester_modules
 
 with col_mod:
-    selected_module = st.selectbox("Select module:", options = filter_options)
+    selected_module = ui.select("Module:", options = filter_options)
 
 mod_query_params = None if selected_module == "All Modules" else selected_module
+
+st.write("____")
 
 
 ####################
 # CARDS
 ####################
-st.write("### Grade Progress")
+shadcn_text("Grade Progress", variant = "heading")
 progress = get_grade_progress(selected_trimester, module_code = mod_query_params)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    with st.container(border = True):
-        st.metric(
-            label = "Grade Secured",
-            value = f"{progress['earned_points']:.1f} / {progress['completed_weight']:.1f} Marks",
-            delta = f"{progress['completed_weight']:.1f}% coursework graded"
-        )
-
-with col2:
-    with st.container(border = True):
-        total = progress["total_weight"]
-
-        if total == 100:
-            delta_msg = "Syllabus fully configured (100%)"
-            delta_color = "normal"
-        elif total < 100:
-            delta_msg = f"Syllabus incomplete: {total:.1f}% / 100%"
-            delta_color = "inverse"
-        else:
-            delta_msg = f"Syllabus exceeds 100% ({total:.1f}%). \n\n **Please fix assessment weightings**."
-            delta_color = "inverse"
-        
-        st.metric(
-            label = "Upcoming Marks / Grades",
-            value = f"{progress['upcoming_weight']:.1f}% Available",
-            delta = delta_msg,
-            delta_color = delta_color
-        )
-
-
 
 chart_df = get_weekly_workload(selected_trimester, module_code = mod_query_params)
 full_timeline_df = pd.DataFrame({"Week" : list(range(1, 18))})
 chart_df = pd.merge(full_timeline_df, chart_df, on = "Week", how = "left").fillna(0)
 
-with col3:
-    with st.container(border = True):
-        current_week_row = chart_df[chart_df["Week"] == active_week]
-        week_load = float(current_week_row["Total Workload (%)"].values[0]) if not current_week_row.empty else 0.0
-
-        st.metric(
-            label = f"Week {active_week} Focus",
-            value = f"{week_load:.1f}% Due" if week_load > 0 else "No assessments due!",
-        )
-
+col1, col2, col3 = st.columns(3)
+cols = st.columns(3)
+with cols[0]:
+    ui.metric_card("Grade Secured", f"{progress['earned_points']:.1f} / {progress['completed_weight']:.1f} Marks",
+                delta = f"{progress['completed_weight']:.1f}% coursework graded")
+with cols[1]:
+    total = progress["total_weight"]
+    if total == 100: delta_msg = "Syllabus fully configured (100%)"
+    elif total < 100: delta_msg = f"Syllabus incomplete: {total:.1f}% / 100%"
+    else: delta_msg = f"Syllabus exceeds 100% ({total:.1f}%). \n\n **Please fix assessment weightings**."
+    ui.metric_card("Upcoming Marks / Grades", f"{progress['upcoming_weight']:.1f}% Available", delta = delta_msg)
+with cols[2]:
+    current_week_row = chart_df[chart_df["Week"] == active_week]
+    week_load = float(current_week_row["Total Workload (%)"].values[0]) if not current_week_row.empty else 0.0
+    ui.metric_card(f"Week {active_week} Focus", f"{week_load:.1f}% Due" if week_load > 0 else "No assessments due!", delta = "View below to see modules with assessments due.")
 
 st.write("_____")
 
 
-
-st.write(f"### 📈 Workload Heatmap: {selected_module}")
+shadcn_text("Workload Heatmap", variant = "heading")
+shadcn_text(f"{selected_module}", variant = "subheading")
 
 user_profile = get_user_settings()
 
@@ -169,26 +174,25 @@ st.write("____")
 #################
 # WEEKLY AGENDA
 #################
-st.write(f"### Agenda: Week {active_week}")
-tab_contributors, tab_agenda = st.tabs(["Module Contributors", "Week Tasks"])
+shadcn_text("Agenda", variant = "heading")
+shadcn_text(f"Week {active_week}", variant = "subheading")
 
+selected_tab = ui.tabs(options = ["Important Modules", "Week Tasks"], key = "selected_agenda_tab")
 
-with tab_contributors:
+if selected_tab == "Important Modules":
     df_contributors = get_week_contributors(selected_trimester, active_week)
     if df_contributors.empty:
         st.info(f"Week {active_week} is clear!")
     else:
-        st.write("#### Important Modules")
         for idx, row in df_contributors.iterrows():
             st.markdown(f":blue[**{row['Module Code']}** - *{row['Module Title']}*] : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
             st.progress(float(row['Contribution (%)']) / 100.0)
 
-with tab_agenda:
+if selected_tab == "Week Tasks":
     df_agenda = get_week_agenda(selected_trimester, active_week)
     if df_agenda.empty:
         st.info(f"Week {active_week} is clear!")
     else:
-        st.write("#### Tasks")
         for idx, row in df_agenda.iterrows():
             ass_id = int(row['Assessment ID'])
             mod_code = row['Module Code']

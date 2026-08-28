@@ -8,6 +8,7 @@ from database import (
     insert_assessment, delete_assessment, update_assessment,
     get_user_settings
 )
+import streamlit_shadcn_ui as ui
 
 user_profile = get_user_settings()
 
@@ -270,7 +271,8 @@ def render_assessment_section():
                 exam_weeks_str = "13, 14"
 
             # toggle to indicate info statements for form
-            is_final_exam = st.toggle("Assessment is an end of semester final exam")
+            is_final_exam = ui.switch("Assessment is an end of semester final exam", value = False)
+
 
             # form submission
             with st.form("new_assessment_form", clear_on_submit = True):

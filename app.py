@@ -96,7 +96,7 @@ if user_profile is None:
                     if st.button("Back", key="back_3", use_container_width = True):
                         s.previous()
                 with save:
-                    if st.button("Save Settings & Continue to StrateGPA", key="save_settings_and_continue"):
+                    if st.button("Save & Continue", key="save_settings_and_continue", use_container_width = True):
                         success = save_user_settings(inst_name.strip(), system_choice, target_score, weeks_aut, weeks_spr)
                         if success:
                             st.success("Saving!")
@@ -117,6 +117,7 @@ if user_profile is None:
 
 
 else:
+
     config_page = st.Page("views/configurations.py", title = "Module and Assessment Registration", icon = ":material/add:")
     grades_page = st.Page("views/grades_entry.py", title = "Grade Entry", icon = ":material/add:")
     dashboard_page = st.Page("views/dashboard.py", title = "Weekly Workload", icon = ":material/event:")

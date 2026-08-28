@@ -1,42 +1,61 @@
 import streamlit as st
 from database import get_user_settings
+import streamlit_shadcn_ui as ui
 
 st.set_page_config(page_title = "StrateGPA: Instruction Manual", layout = "wide")
 st.title("Instruction Manual")
-st.caption("Learn how to configure the app.")
-st.write("____")
 
 
 user_profile = get_user_settings()
 system = user_profile["system"]
-
-tab_onboarding, tab_config, tab_grades, tab_analytics = st.tabs([
+selected_tab = ui.tabs(
+    options=[
     "1. Initial Calibration",
     "2. Syllabus Configurations",
     "3. Logging Results",
     "4. Interpreting Dashboard"
-])
+], 
+    key="grading_workflow_tabs"
+)
 
-with tab_onboarding:
+if selected_tab == "1. Initial Calibration":
     st.markdown("### Understanding System Calibration")
     st.write("Before data entry begins, StrateGPA bases its calculations on your university's rules.")
 
     col1, col2 = st.columns(2)
 
-    with col1:
-        with st.container(border = True):
-            st.markdown("##### Active Profile Settings")
-            st.markdown(f"**Current Selected Scale:** {system}")
-            st.markdown(f"**Target GPA:** {user_profile["target_gpa"]}")
-            st.markdown(f"**Autumn Teaching Weeks:** {user_profile["teaching_weeks_autumn"]}")
-            st.markdown(f"**Spring Teaching Weeks:** {user_profile["teaching_weeks_spring"]}")
-    with col2:
-         st.markdown('''
-        * **Why Semester Lengths Matter:** Setting your accurate teaching weeks is useful when inputting final exam assessments and you don't know which exact week the exam is on, and for the weekly workload toggle.
-        * **How to Adjust:** If you misconfigured these options during setup, please ____
-         ''')
+    columns = st.columns(2)
+    with columns[0]:
+        ui.card(
+            title = "University",
+            description = f"{user_profile["institution"]}",
+            )
+        ui.card(
+        title = "Current Selected Scale:",
+        description = f"{system}",
+        )
+        ui.card(
+            title = "Target GPA",
+            description = f"{user_profile["target_gpa"]}",
+            )
+        ui.card(
+            title = "Autumn Teaching Weeks",
+            description = f"{user_profile["teaching_weeks_autumn"]}",
+                )
+        ui.card(
+                title = "Spring Teaching Weeks",
+                description = f"{user_profile["teaching_weeks_spring"]}",
+                )
+    with columns[1]:
+        items = [
+                ui.AccordionItem("sem_lengths", "Why Semester Lengths Matter", "Setting your accurate teaching weeks is useful when inputting final exam assessments and you don't know which exact week the exam is on, and for the weekly workload toggle."),
+                ui.AccordionItem("adjust", "How to Adjust", "If you misconfigured these options during setup, please ____"),
+                ]
+        open_section = ui.accordion(items)
 
-with tab_config:
+
+
+if selected_tab == "2. Syllabus Configurations":
     st.markdown("### Structuring Your Courses & Assessments")
     st.write("To populate pages like *Weekly Workload* and *Academic Performance*, first navigate to **Module and Assessment Registrations**.")
     
@@ -59,7 +78,7 @@ with tab_config:
             Brightspace curriculum handouts to select the correct sub-scale dropdown option (*Standard, Alt Linear 40, Alt Non-Linear 50, Alt Linear 60*)!\n
         ''')
 
-with tab_grades:
+if selected_tab == "3. Logging Results":
     st.markdown("### Managing Your Results Flow")
     st.write("The **Grade Entry** page is where you input grades.")
     
@@ -72,7 +91,7 @@ with tab_grades:
     """)
 
 
-with tab_analytics:
+if selected_tab == "4. Interpreting Dashboard":
     st.markdown("### Understanding StrateGPA")
     
     with st.container(border = True):
