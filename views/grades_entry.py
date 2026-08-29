@@ -6,15 +6,17 @@ from database import (
     update_assessment_grade,
     get_assessments_from
 )
+import streamlit_shadcn_ui as ui
+from helper_functions import shadcn_text
 
 st.set_page_config(page_title = "StrateGPA: Log Grades", layout = "wide")
 
-st.title("Log Achieved Grades")
-st.caption("Update your results here as soon as you receive them to keep your target GPA predictions accurate.")
+shadcn_text("Log Achieved Grades", variant = "title", color = "navy")
+shadcn_text("Update your results here as soon as you receive them to keep your target GPA predictions accurate.", variant = "subheading", color = "grey")
 st.write("____")
 
 user_profile = get_user_settings()
-selected_semester = st.selectbox("Select Semester:", options = ["Autumn", "Spring"])
+selected_semester = ui.select("Select Semester:", options = ["Autumn", "Spring"])
 
 df_modules = get_modules_dataframe()
 if df_modules.empty:
@@ -35,7 +37,6 @@ else:
                 if df_ass.empty:
                     st.caption("No assessments logged for this module yet.")
                 else:
-                    st.write("**Assessments:**")
 
                     for a_idx, a_row in df_ass.iterrows():
                         a_id = int(a_row["id"])
@@ -47,13 +48,16 @@ else:
                         col_info, col_input = st.columns([1, 1])
                         with col_info:
                             st.write("")
-                            st.markdown(f":blue[**{a_title}**]: **{weight:.0f}% of module**")
-
+                            st.write("")
+                            shadcn_text(f"{a_title}", variant = "subheading", color = "sky")
+                            shadcn_text(f"{weight:.0f}% of module", variant = "subheading", color = "navy")
+    
                             if is_graded:
-                                st.caption(f"Current recorded result: **{current_grade:.1f}**")
+                                st.write("")
+                                shadcn_text(f"Current recorded result: {current_grade:.1f}", variant = "subheading", color = "grey")
                             else:
-                                st.caption("Pending Grade ....")
-
+                                st.write("")
+                                shadcn_text("Pending Grade ....", variant = "subheading", color = "grey")
                         with col_input:
                             with st.form(key = f"grade_submission_form_{a_id}"):
                                 default_val = float(current_grade) if is_graded else 0.0

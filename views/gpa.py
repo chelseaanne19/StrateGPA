@@ -3,43 +3,13 @@ import pandas as pd
 from database import get_modules_dataframe, get_user_settings
 from gpa_calc import calculate_module_gpa, calculate_semester_gpa
 import streamlit_shadcn_ui as ui
+from helper_functions import shadcn_text
 
 
 st.set_page_config(page_title = "Academic Performance", layout = "wide")
 
-def shadcn_text(text: str, variant: str = "heading"):
-    variant_styles = {
-        "title": {
-            "class": "shadcn-t-title",
-            "css": "font-size: 44px; font-weight: 700; letter-spacing: -0.05em; color: #09090b; margin-bottom: 16px;"
-        },
-        "heading": {
-            "class": "shadcn-t-heading",
-            "css": "font-size: 24px; font-weight: 600; letter-spacing: -0.025em; color: #09090b; margin-top: 16px; margin-bottom: 8px;"
-        },
-        "subheading": {
-            "class": "shadcn-t-sub",
-            "css": "font-size: 13px; font-weight: 400; color: #71717a; margin-bottom: 12px; line-height: 1.4;"
-        }
-    }
-    
-    style = variant_styles.get(variant, variant_styles["heading"])
-
-    return st.markdown(
-        f"""
-        <style>
-        @import url('https://googleapis.com');
-        .shadcn-base-txt {{
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }}
-        </style>
-        <div class="shadcn-base-txt" style="{style['css']}">{text}</div>
-        """,
-        unsafe_allow_html=True
-    )
-
-shadcn_text("Academic Performance", variant = "title")
-shadcn_text("GPA metrics, track provisional and final grades, learn where work needs to improve", variant = "subheading")
+shadcn_text("Academic Performance", variant = "title", color = "navy")
+shadcn_text("GPA metrics, track provisional and final grades, learn where work needs to improve", variant = "subheading", color = "grey")
 st.write("____")
 
 
@@ -51,28 +21,30 @@ selected_semester = ui.select("Choose semester",
 )
 semester_standings = calculate_semester_gpa(selected_semester)
 st.write("____")
-icon_col, icon_text = st.columns([0.03, 0.97], gap="small")
-
+icon_col, icon_text = st.columns([0.02, 0.98], gap="small")
 with icon_col:
-    # Safely parses the native Streamlit Material engine 
     st.markdown("### :material/book:") 
-
 with icon_text:
-    shadcn_text("University Framework Tracker", variant="heading")
+    if "Percentage" in user_profile["system"]:
+        shadcn_text("Current Honours Grade Standing", variant = "heading")
+    else:
+        shadcn_text("Current GPA Standing", variant = "heading")
 
-st.markdown("### :material/book: Current Semester GPA")
-with st.container(border = True):
 
-    st.metric(
-        label = f"{selected_semester} GPA",
-        value = semester_standings["overall_score"],
+ui.metric_card(
+        f"{selected_semester} Standing" if "Percentage" in user_profile["system"] else f"{selected_semester} GPA" ,
+        semester_standings["overall_score"],
         delta = semester_standings["classification"]
-    )  
+    )
 
 
 ####
 st.write("____")
-st.markdown("### :material/book: Module Grades")
+icon_col_1, icon_text_1 = st.columns([0.02, 0.98], gap="small")
+with icon_col_1:
+    st.markdown("### :material/book:") 
+with icon_text_1:
+    shadcn_text("Module Grades", variant = "heading")
 
 df_modules = get_modules_dataframe()
 if df_modules.empty:
@@ -93,17 +65,24 @@ else:
                 col_info, col_pct, col_gpa = st.columns(3)
                 
                 with col_info:
-                    st.markdown(f"##### **{code}**")
-                    st.caption(title)
+                    shadcn_text(f"{code}", variant = "heading", color = "navy")
+                    shadcn_text(f"{title}", variant = "subheading", color = "grey")
                     
                 with col_pct:
-                    st.markdown(f"**Average Percentage:** `{stats['Module Average']:.0f}%`")
-                    st.caption(f"Syllabus Graded: {stats['Weight Graded']:.0f}% of module")
+                    shadcn_text(f"Average Percentage: {stats['Module Average']:.0f}%", variant = "heading", color = "navy")
+                    shadcn_text(f"Syllabus Graded: {stats['Weight Graded']:.0f}% of module", variant = "subheading", color = "grey")
                     
                 with col_gpa:
-                    st.markdown(f"**Letter Grade:** `{stats['Letter_Grade']}`")
-                    st.caption(f"Points Awarded: {stats['Module GPA']}")
+                    shadcn_text(f"Letter Grade: {stats['Letter_Grade']}", variant = "heading", color = "navy")
+                    shadcn_text(f"Points Awarded: {stats['Module GPA']}", variant = "subheading", color = "grey")
 
 ####
 st.write("_____")
-st.write("### :material/book: GPA Targets")
+icon_col_2, icon_text_2 = st.columns([0.02, 0.98], gap="small")
+with icon_col_2:
+    st.markdown("### :material/book:") 
+with icon_text_2:
+    if "Percentage" in user_profile["system"]:
+        shadcn_text("Honours Target", variant = "heading")
+    else:
+        shadcn_text("GPA Target", variant = "heading")

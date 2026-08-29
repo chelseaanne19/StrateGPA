@@ -285,7 +285,6 @@ def calculate_semester_gpa(trimester):
         overall_score = accumulated_gpa_points / modules_with_grades
         
         if "UCD" in system:
-            
             if overall_score >= 3.68: classification_badge = "First Class Honours (1st)"
             elif overall_score >= 3.08: classification_badge = "Second Class Honours, Grade 1 (2:1)"
             elif overall_score >= 2.48: classification_badge = "Second Class Honours, Grade 2 (2:2)"

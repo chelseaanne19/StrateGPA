@@ -9,43 +9,12 @@ from database import (
 import plotly.express as px
 from gpa_calc import calculate_semester_gpa
 import streamlit_shadcn_ui as ui
+from helper_functions import shadcn_text
 
 st.set_page_config(page_title = "Weekly Workload", layout = "wide")
 
-
-def shadcn_text(text: str, variant: str = "heading"):
-    variant_styles = {
-        "title": {
-            "class": "shadcn-t-title",
-            "css": "font-size: 44px; font-weight: 700; letter-spacing: -0.05em; color: #09090b; margin-bottom: 16px;"
-        },
-        "heading": {
-            "class": "shadcn-t-heading",
-            "css": "font-size: 24px; font-weight: 600; letter-spacing: -0.025em; color: #09090b; margin-top: 16px; margin-bottom: 8px;"
-        },
-        "subheading": {
-            "class": "shadcn-t-sub",
-            "css": "font-size: 13px; font-weight: 400; color: #71717a; margin-bottom: 12px; line-height: 1.4;"
-        }
-    }
-    
-    style = variant_styles.get(variant, variant_styles["heading"])
-
-    return st.markdown(
-        f"""
-        <style>
-        @import url('https://googleapis.com');
-        .shadcn-base-txt {{
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }}
-        </style>
-        <div class="shadcn-base-txt" style="{style['css']}">{text}</div>
-        """,
-        unsafe_allow_html=True
-    )
-
 shadcn_text("Weekly Workload", variant = "title")
-shadcn_text("Track upcoming busy weeks and plan accordingly.", variant = "subheading")
+shadcn_text("Track upcoming busy weeks and plan accordingly.", variant = "subheading", color = "grey")
 st.write("____")
 
 
@@ -185,8 +154,9 @@ if selected_tab == "Important Modules":
         st.info(f"Week {active_week} is clear!")
     else:
         for idx, row in df_contributors.iterrows():
-            st.markdown(f":blue[**{row['Module Code']}** - *{row['Module Title']}*] : **{float(row['Contribution (%)']):.1f}%** of final grade is due.")
-            st.progress(float(row['Contribution (%)']) / 100.0)
+            shadcn_text(f"{row["Module Code"]} : {row["Module Title"]}", variant = "heading", color = "sky")
+            ui.progress(value = float(row["Contribution (%)"]), label = f"{float(row["Contribution (%)"]):.1f}% is due.", show_value = True)
+            st.write("____")
 
 if selected_tab == "Week Tasks":
     df_agenda = get_week_agenda(selected_trimester, active_week)

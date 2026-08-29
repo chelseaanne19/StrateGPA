@@ -2,6 +2,7 @@ import streamlit as st
 from database import table_setup, get_user_settings, save_user_settings
 import streamlit_shadcn_ui as ui
 from streamlit_extras.steps import *
+from helper_functions import shadcn_text
 
 table_setup()
 user_profile = get_user_settings()
