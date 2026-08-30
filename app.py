@@ -4,6 +4,45 @@ import streamlit_shadcn_ui as ui
 from streamlit_extras.steps import *
 from helper_functions import shadcn_text
 
+if "show_welcome" not in st.session_state:
+    st.session_state.show_welcome = False
+
+@st.dialog(":material/school:")
+def welcome_message():
+    shadcn_text("Welcome to StrateGPA!", variant = "title")
+    shadcn_text("Below is a quick reference guide to understand what StrateGPA entails.", variant = "heading")
+    ui.separator()
+
+    ui.card(
+        title = "Module and Assessment Registration",
+        description = "Log your course modules and assessments here."
+    )
+
+    ui.card(
+        title = "Grade Entry",
+        description = "Open your modules and view their assessments. Save your grades (as percentages) as soon as you receive them to instantly synchronise your charts and GPA metrics!"
+    )
+
+    ui.card(
+        title = "Weekly Workload",
+        description = "Tracks Grade Secured stats, a colour workload heatmap to track busy weeks, and active weekly agendas that flag high-priority modules and assessments."
+    )
+
+    ui.card(
+        title = "Academic Performance",
+        description = "Compares your live running semester academic standing against your Target Honours Goal / GPA, along with individual module grade statistics."
+    )
+
+    st.write("")
+
+    ui.alert("Need more clarification? Open the Help Guide for further details.")
+    st.session_state.show_welcome = False
+    if ui.button("Continue!"):
+        st.rerun()
+
+
+
+
 table_setup()
 user_profile = get_user_settings()
 
@@ -113,11 +152,16 @@ if user_profile is None:
                 with back:
                     if st.button("Back", key="back_3_error"):
                         s.previous()
+    st.session_state.show_welcome = True
 
     st.write("____")
 
-
 else:
+
+    if st.session_state.get("show_welcome", True):
+        st.session_state.welcome_message = False
+        welcome_message()
+    
 
     config_page = st.Page("views/configurations.py", title = "Module and Assessment Registration", icon = ":material/add:")
     grades_page = st.Page("views/grades_entry.py", title = "Grade Entry", icon = ":material/add:")
@@ -133,3 +177,4 @@ else:
     )
 
     pg.run()
+    

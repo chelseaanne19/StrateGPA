@@ -11,6 +11,8 @@ from gpa_calc import calculate_semester_gpa
 import streamlit_shadcn_ui as ui
 from helper_functions import shadcn_text
 
+
+
 st.set_page_config(page_title = "Weekly Workload", layout = "wide")
 
 shadcn_text("Weekly Workload", variant = "title")
@@ -18,23 +20,19 @@ shadcn_text("Track upcoming busy weeks and plan accordingly.", variant = "subhea
 st.write("____")
 
 
-# __________________
-# SIDEBAR
-# __________________
+#region Sidebar
 if "current_week" not in st.session_state:
     st.session_state.current_week = 1
 
 with st.sidebar:
-    st.markdown("### Timeline Navigation")
-    st.session_state.current_week = st.slider(
-            "Set Current Academic Week:",
-              min_value = 1,
-              max_value = 17,
-              value = st.session_state.current_week
-              )
+    shadcn_text("Timeline", variant = "heading")
+    st.session_state.current_week = ui.select(
+        "Set Current Academic Week:",
+        list(range(1, 18))
+    )
 
 active_week = st.session_state.current_week
-
+#endregion
 
 # filters
 col_trim, col_mod = st.columns([1, 1])
@@ -58,7 +56,7 @@ with col_mod:
 
 mod_query_params = None if selected_module == "All Modules" else selected_module
 
-st.write("____")
+ui.separator()
 
 
 ####################

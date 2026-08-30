@@ -419,13 +419,13 @@ def calculate_target_score(trimester):
         return {
             "status" : "Impossible",
             "required_mark": required_avg,
-            "message" : f"**Mathematically Out of Scope: You would need an average of {required_avg:.2f}% across your remaining assessments to achieve the target GPA / Honours"
+            "message" : f"**Mathematically Out of Scope**: You would need an average of {required_avg:.2f}% across your remaining assessments to achieve the target GPA / Honours"
         }
     elif required_avg < 40.0:
         return {
             "status" : "Safe Scope",
             "required_mark" : required_avg,
-            "message" :f"**Comfortable Buffer: You need an average of {required_avg:.2f}% across your remaining assessments to achieve your target GPA / Honours. Stay consistent!"
+            "message" :f"**Comfortable Buffer**: You need an average of {required_avg:.2f}% across your remaining assessments to achieve your target GPA / Honours. Stay consistent!"
         }
     else:
         return {

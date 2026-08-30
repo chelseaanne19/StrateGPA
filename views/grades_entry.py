@@ -17,6 +17,7 @@ st.write("____")
 
 user_profile = get_user_settings()
 selected_semester = ui.select("Select Semester:", options = ["Autumn", "Spring"])
+ui.separator()
 
 df_modules = get_modules_dataframe()
 if df_modules.empty:
@@ -90,5 +91,3 @@ else:
                                             st.rerun()
                                         else:
                                             st.error("Error clearing grade.")
-
-            st.space("small")
