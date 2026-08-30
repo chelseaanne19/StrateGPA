@@ -305,3 +305,131 @@ def calculate_semester_gpa(trimester):
         "modules_tracked" : total_module_count,
         "modules_graded" : modules_with_grades
         }
+
+
+def calculate_target_score(trimester):
+    user_profile = get_user_settings()
+    if not user_profile:
+        return {
+            "status": "uncalibrated",
+            "required_mark" : 0.0,
+            "message" : "system profile settings missing"
+        }
+
+    system = user_profile["system"]
+    target = user_profile["target_gpa"]
+
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+        cur.execute('''
+                        SELECT module_code
+                        FROM modules
+                        WHERE trimester = ?
+                        ''',
+                        (trimester,)
+                        )
+        module_rows = cur.fetchall()
+
+    if not module_rows:
+        return {
+            "status" : "No Modules",
+            "required_mark" : 0.0,
+            "message" : "Please register modules first."
+        }
+
+    total_modules = len(module_rows)
+    total_graded_percentage = 0.0
+    total_secured_points = 0.0
+    total_secured_marks = 0.0
+
+    for row in module_rows:
+        mod_code = row[0]
+
+        with sqlite3.connect(DB_NAME) as conn:
+            query = '''
+                    SELECT
+                        assessment_percentage,
+                        received_grade
+                    FROM assessments
+                    WHERE module_code = ?
+                    '''
+            df = pd.read_sql_query(query, conn, params = (mod_code,))
+
+        for idx, a_row in df.iterrows():
+            weight = float(a_row["assessment_percentage"])
+            grade = a_row["received_grade"]
+
+            if pd.notna(grade):
+                total_graded_percentage += weight
+                total_secured_marks += (weight / 100.0) * float(grade)
+
+
+    total_semester_syllabus_capacity = total_modules * 100 # e.g. 6 modules * 100 = 600 marks available
+    remaining_upcoming_marks = total_semester_syllabus_capacity - total_graded_percentage
+
+    if remaining_upcoming_marks <= 0:
+        return {
+            "status" : "Concluded",
+            "required_mark" : 0.0,
+            "message" : "Syllabus tracking complete. All grades have been submitted."
+        }
+
+
+    if "Percentage" in system:
+        total_marks_needed = total_semester_syllabus_capacity * (target / 100.0)
+        marks_deficit = total_marks_needed - total_secured_marks
+    else:
+        if "UCD" in system:
+            if target >= 4.2: target_pct_equiv = 90.0
+            elif target >= 4.0: target_pct_equiv = 80.0
+            elif target >= 3.8: target_pct_equiv = 70.0
+            elif target >= 3.6: target_pct_equiv = 66.67
+            elif target >= 3.4: target_pct_equiv = 63.33
+            elif target >= 3.2: target_pct_equiv = 60.0
+            elif target >= 3.0: target_pct_equiv = 56.67
+            elif target >= 2.8: target_pct_equiv = 53.33
+            elif target >= 2.6: target_pct_equiv = 50.0
+            elif target >= 2.4: target_pct_equiv = 46.67
+            elif target >= 2.2: target_pct_equiv = 43.33
+            else: target_pct_equiv = 40.0
+        else:
+            if target >= 4.0: target_pct_equiv = 93.0
+            elif target >= 3.7: target_pct_equiv = 90.0
+            elif target >= 3.3: target_pct_equiv = 87.0
+            elif target >= 3.0: target_pct_equiv = 83.0
+            elif target >= 2.7: target_pct_equiv = 80.0
+            elif target >= 2.3: target_pct_equiv = 77.0
+            elif target >= 2.0: target_pct_equiv = 73.0
+            else: target_pct_equiv = 65.0
+
+        total_marks_needed = total_semester_syllabus_capacity * (target_pct_equiv / 100.0)
+        marks_deficit = total_marks_needed - total_secured_marks
+
+    if marks_deficit <= 0:
+        return {
+            "status" : "Secured",
+            "required_mark" : 0.0,
+             "message" : "You have successfully secured enough absolute marks to achieve your target honours / GPA!"
+        }
+
+    required_avg = (marks_deficit / remaining_upcoming_marks) * 100.0
+
+
+    if required_avg > 100.0:
+        return {
+            "status" : "Impossible",
+            "required_mark": required_avg,
+            "message" : f"**Mathematically Out of Scope: You would need an average of {required_avg:.2f}% across your remaining assessments to achieve the target GPA / Honours"
+        }
+    elif required_avg < 40.0:
+        return {
+            "status" : "Safe Scope",
+            "required_mark" : required_avg,
+            "message" :f"**Comfortable Buffer: You need an average of {required_avg:.2f}% across your remaining assessments to achieve your target GPA / Honours. Stay consistent!"
+        }
+    else:
+        return {
+            "status" : "On Track",
+            "required_mark" : required_avg,
+            "message": f"**On Track**: You need an average of {required_avg:.2f}% across your remaining assessments to achieve your target GPA / Honours."
+        }

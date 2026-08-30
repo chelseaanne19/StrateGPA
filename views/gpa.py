@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from database import get_modules_dataframe, get_user_settings
-from gpa_calc import calculate_module_gpa, calculate_semester_gpa
+from gpa_calc import calculate_module_gpa, calculate_semester_gpa, calculate_target_score
 import streamlit_shadcn_ui as ui
 from helper_functions import shadcn_text
 
@@ -86,3 +86,56 @@ with icon_text_2:
         shadcn_text("Honours Target", variant = "heading")
     else:
         shadcn_text("GPA Target", variant = "heading")
+
+result = calculate_target_score(selected_semester)
+
+with st.container(border = True):
+    col_metric, col_msg = st.columns(2)
+
+    with col_metric:
+        if result["status"] == "Impossible":
+            alert_prefix = "X"
+            metric_label = "Required Avg (Exceeded)"
+            metric_val = "Impossible"
+        elif result["status"] == "Secured":
+            alert_prefix = "Success"
+            metric_label = "Required Avg"
+            metric_val = "0.0%"
+        elif result["status"] in ["No Modules", "Uncalibrated", "Concluded"]:
+            alert_prefix = "info"
+            metric_label = "Required Avg"
+            metric_val = "N/A"
+        else:
+            alert_prefix = "Target"
+            metric_label = "Required Avg"
+            metric_val = f"{result["required_mark"]:.1f}%"
+
+        st.metric(label = metric_label, value = metric_val)
+
+    with col_msg:
+        st.write("")
+        if result["status"] == "Impossible":
+            st.error(result["message"])
+        elif result["status"] == "Secured":
+            st.balloons()
+            st.success(result["message"])
+        elif result["status"] in ["No Modules", "Uncalibrated", "Concluded"]:
+            st.info(result["message"])
+        else:
+            st.success(result["message"])
+
+
+if result["status"] in ["On Track", "Safe Scope"]:
+    req_mark = min(max(float(result["required_mark"]), 0.0), 100.0)
+    st.write("")
+
+    shadcn_text("Thing", variant = "heading")
+    st.slider(
+        "Required thing",
+        min_value = 0.0,
+        max_value = 100.0,
+        value = req_mark,
+        disabled = True,
+        label_visibility = "collapsed",
+        help = "This bar is to highlight where your required performance sits."
+    )
