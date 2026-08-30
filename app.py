@@ -168,11 +168,11 @@ else:
     dashboard_page = st.Page("views/dashboard.py", title = "Weekly Workload", icon = ":material/event:")
     gpa_page = st.Page("views/gpa.py", title = "Academic Performance", icon = ":material/add_task:")
     help_page = st.Page("views/help_guide.py", title = "Help Guide", icon = ":material/help:")
-
+    feedback_page = st.Page("views/feedback.py", title = "Feedback", icon = ":material/rate_review:")
     pg = st.navigation(
         {
             f"🏫 {user_profile['institution']}": [dashboard_page, gpa_page],
-                  "System Management": [config_page, grades_page, help_page]
+                  "System Management": [config_page, grades_page, help_page, feedback_page]
         }
     )
 
