@@ -98,10 +98,13 @@ if selected_trimester == "Autumn":
 else:
     max_teaching_weeks = user_profile["teaching_weeks_spring"] if user_profile else 14
 
+show_exams = st.toggle(f"Include End-of-Semester Assessments (Weeks {max_teaching_weeks + 1}+)", value = True, help = "Toggle off to better view your semester workload before exams.")
+
 if chart_df["Total Workload (%)"].sum() == 0:
     st.info("No active assessments located for this dashboard filter.")
 else:
-    fig = px.bar(
+    if show_exams:
+        fig = px.bar(
         chart_df,
         x = "Week",
         y = "Total Workload (%)",
@@ -120,21 +123,54 @@ else:
             "Total Workload (%)": True,
             "Module": True
         }
-    )
+        )
 
-    fig.update_layout(
+        fig.update_layout(
         height = 400,
         margin = dict(l = 20, r = 20, t = 20, b = 20),
         xaxis = dict(tickmode = "linear", tick0 = 1, dtick = 1, fixedrange = True),
         yaxis = dict(fixedrange = True),
         coloraxis_colorbar = dict(title = "Stress Index"),
         dragmode = False
-    )
+        )
 
-    chart_config = {"displayModeBar": False, "scrollZoom": False}
+        chart_config = {"displayModeBar": False, "scrollZoom": False}
 
-    st.plotly_chart(fig, use_container_width = True, config = chart_config)
-
+        st.plotly_chart(fig, use_container_width = True, config = chart_config)
+    else:
+        fig = px.bar(
+                chart_df[chart_df["Week"] <= max_teaching_weeks],
+                x = "Week",
+                y = "Total Workload (%)",
+                color = "Total Workload (%)",
+                color_continuous_scale = [
+                    (0.0, "#2ecc71"),
+                    (0.4, "#f39c12"),
+                    (0.6, "#f75a05"),
+                    (0.8, "#e74c3c"),
+                    (1.0, "#e74c3c")
+                ],
+                range_color = [0, 100],
+                labels = {"Week": "Academic Week Number", "Total Workload (%)": "Total Workload (%)"},
+                hover_data = {
+                    "Week": False,
+                    "Total Workload (%)": True,
+                    "Module": True
+                }
+                )
+        
+        fig.update_layout(
+                height = 400,
+                margin = dict(l = 20, r = 20, t = 20, b = 20),
+                xaxis = dict(tickmode = "linear", tick0 = 1, dtick = 1, fixedrange = True),
+                yaxis = dict(fixedrange = True),
+                coloraxis_colorbar = dict(title = "Stress Index"),
+                dragmode = False
+                )
+        
+        chart_config = {"displayModeBar": False, "scrollZoom": False}
+        
+        st.plotly_chart(fig, use_container_width = True, config = chart_config)
 st.write("____")
 
 

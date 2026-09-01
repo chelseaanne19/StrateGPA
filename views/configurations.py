@@ -43,7 +43,7 @@ df_assessments = get_assessments_dataframe()
 
 # DIALOG WINDOWS
 @st.dialog("Confirm Assessment Details")
-def confirm_assessment_submission(module_code, title, percentage, must_pass, weeks_list, component_scale = None):
+def confirm_assessment_submission(module_code, title, percentage, must_pass, weeks_list, is_final_exam, component_scale = None):
     st.warning("Please review assessment information carefully before submitting.")
     st.write(f"Module Code: **{module_code}**")
     st.write(f"Assignment Title: **{title}**")
@@ -61,7 +61,7 @@ def confirm_assessment_submission(module_code, title, percentage, must_pass, wee
     with yes:
         if st.button("Yes, Submit", use_container_width = True, key = "confirm_assessment_submission", type = "primary"):
             must_pass_int = 1 if must_pass else 0
-            success = insert_assessment(module_code, title, percentage, must_pass_int, weeks_list, component_scale = component_scale)
+            success = insert_assessment(module_code, title, percentage, must_pass_int, weeks_list, is_final_exam, component_scale = component_scale)
             if success:
                 st.success(f"{title} Created Successfully!")
                 st.rerun()
@@ -320,7 +320,7 @@ def render_assessment_section():
                 
                 if st.form_submit_button("Create Assessment"):
                     if module_code and title and weeks:
-                        confirm_assessment_submission(module_code, title, percentage, must_pass, weeks, component_scale = None if "UCD" not in user_profile["system"] else selected_scale)
+                        confirm_assessment_submission(module_code, title, percentage, must_pass, weeks, is_final_exam, component_scale = None if "UCD" not in user_profile["system"] else selected_scale)
                     else:
                         st.error("Please fill in all fields.")
 

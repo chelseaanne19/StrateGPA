@@ -109,6 +109,17 @@ def save_user_settings(institution, system, target, teaching_weeks_autumn, teach
     except sqlite3.IntegrityError:
         return False
 
+def clear_user_settings():
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cur = conn.cursor()
+
+            cur.execute("DELETE FROM settings")
+            conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
 # TO INITIALISE TABLES (testing with hardcoded data (list) before user input is involved)
 def seed_database(MODULES):
     # opening connection context manager
@@ -261,7 +272,7 @@ def insert_module(code_input, title_input, trimester_input):
         return False
 
 # INSERT ASESSMENT
-def insert_assessment(module_code, title, percentage, must_pass, weeks_list, component_scale = None):
+def insert_assessment(module_code, title, percentage, must_pass, weeks_list, is_final_exam, component_scale = None):
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cur = conn.cursor()
@@ -274,10 +285,13 @@ def insert_assessment(module_code, title, percentage, must_pass, weeks_list, com
             for index, week_num in enumerate(weeks_list):
                 display_title = f"{title} (Wk {week_num})" if num_weeks > 1 else title
 
-                if index == num_weeks - 1: # last week
-                    row_weight = base_weight + remainder
+                if is_final_exam:
+                    row_weight = percentage
                 else:
-                    row_weight = base_weight
+                    if index == num_weeks - 1: # last week
+                        row_weight = base_weight + remainder
+                    else:
+                        row_weight = base_weight
 
 
                 cur.execute('''

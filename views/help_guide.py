@@ -1,5 +1,5 @@
 import streamlit as st
-from database import get_user_settings
+from database import get_user_settings, clear_user_settings
 import streamlit_shadcn_ui as ui
 from helper_functions import shadcn_text
 
@@ -36,8 +36,8 @@ if selected_tab == "1. Initial Calibration":
         description = f"{system}",
         )
         ui.card(
-            title = "Target GPA:",
-            description = f"{user_profile["target_gpa"]}",
+            title = "Target Percentage:" if "Percentage" in system else "Target GPA:",
+            description = f"{user_profile["target_gpa"]:.0f}%" if "Percentage" in system else f"{user_profile["target_gpa"]}",
             )
         ui.card(
             title = "Autumn Teaching Weeks:",
@@ -50,9 +50,17 @@ if selected_tab == "1. Initial Calibration":
     with columns[1]:
         items = [
                 ui.AccordionItem("sem_lengths", "Why Semester Lengths Matter", "Setting your accurate teaching weeks is useful when inputting final exam assessments and you don't know which exact week the exam is on, and for the weekly workload toggle."),
-                ui.AccordionItem("adjust", "How to Adjust", "If you misconfigured these options during setup, please ____"),
+                ui.AccordionItem("adjust", "How to Adjust", "If you misconfigured these options during setup, you can re-enter the settings below."),
                 ]
         open_section = ui.accordion(items)
+
+        if ui.button("Re-enter university name, grading scale system, and semester teaching weeks"):
+            success = clear_user_settings()
+            if success:
+                st.toast("Redirecting to initial setup!")
+                st.rerun()
+            else:
+                st.error("Error clearing settings.")
 
 
 
