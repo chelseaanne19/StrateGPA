@@ -28,9 +28,9 @@ user_message = ui.textarea(
 
 if ui.button("Submit"):
     if user_message.strip():
-        shadcn_text("submission", variant = "heading")
-        '''
-        formspree_endpoint_url = "https://formspree.io"
+
+        
+        formspree_endpoint_url = "https://formspree.io/f/xaeyelbz"
 
         submission_payload = {
             "Category": feedback_category,
@@ -46,7 +46,7 @@ if ui.button("Submit"):
                 st.error("**Interruption Occurred.** Please verify your connection and try again.")
         except Exception:
             st.error("**ERROR**. Unable to clear payload arrays out to cloud host.")
-        '''
+        
 
     else:
         st.error("Please fill out the message area before submitting.")
