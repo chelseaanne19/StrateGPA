@@ -133,70 +133,67 @@ def get_us_letter_from_points(points):
     elif points >= 1.00: return "D"
     else: return "F"
 
+# -----------------------------------------------------------------------------
+# > CALCULATE MODULE LEVEL SCALE-AWARE STANDING CURRENCIES
+# -----------------------------------------------------------------------------
 def calculate_module_gpa(module_code):
-    '''
-    gets assessments from certain module that have been graded,
-    calculates running score,
-    returns dict with raw percentage, corresponding letter grade, gpa value
-    '''
-
+    
     user_profile = get_user_settings()
+    if not user_profile:
+        return {"Module Average": 0.0, "Letter_Grade": "Pending", "Module GPA": 0.0, "Weight Graded": 0.0}
+
     system = user_profile["grading_system"]
-    
-    
-    with sqlite3.connect(DB_NAME) as conn:
-        query = '''
-                SELECT
-                    assessment_percentage,
-                    received_grade,
-                    component_scale
-                FROM assessments
-                WHERE module_code = ?
-                '''
+    current_uid = get_current_user_id()
+
+    try:
+        response = supabase.table("assessments").select(
+            "assessment_percentage, received_grade, component_scale"
+        ).eq("user_id", current_uid).eq("module_code", module_code).execute()
         
-        df = pd.read_sql_query(query, conn, params = (module_code,))
+        assessments_data = response.data if response.data else []
+    except Exception:
+        assessments_data = []
         
+    if not assessments_data:
+        return {"Module Average": 0.0, "Letter_Grade": "NG", "Module GPA": 0.0, "Weight Graded": 0.0}
     
-    if df.empty:
-        return {"Module Average": 0.0, "Letter_Grade" : "NG", "Module GPA": 0.0, "Weight Graded": 0.0}
-    
-    
-    ##### RUNNING MODULE PERCENTAGES    
-    # mcq: worth 20%, scored 90%
-    # lab quiz: worth 80%, scored 95%
-    # format: [assessment_percentage], [received_grade]
+
+    df = pd.DataFrame(assessments_data)
     
     earned_assessment_percentage = 0.0
     total_assessment_percentage = 0.0
     module_gpa_points = 0.0
     
+
     for idx, row in df.iterrows():
-        assessment_percentage = row["assessment_percentage"]
+
+        assessment_percentage = float(row["assessment_percentage"])
         received_grade = row["received_grade"]
+
         component_scale = row["component_scale"]
         
-        # running percentages
-        if pd.notna(received_grade):
+
+        if received_grade is not None:
+            received_grade = float(received_grade)
             percentage_of_module = received_grade * (assessment_percentage / 100.0)
             earned_assessment_percentage += percentage_of_module
             total_assessment_percentage += assessment_percentage
         
-            # gpa calculations FOR assessment only
+          
             if "UCD" in system:
-                _, assessment_gpa_points = convert_ucd_mark_to_grade(received_grade, scale_type = component_scale)
+                _, assessment_gpa_points = convert_ucd_mark_to_grade(received_grade, scale_type=component_scale)
                 module_gpa_points += assessment_gpa_points * assessment_percentage
             elif "US" in system:
                 _, assessment_gpa_points = convert_us_mark_to_grade(received_grade)
                 module_gpa_points += assessment_gpa_points * assessment_percentage
                   
-    
     if total_assessment_percentage == 0:
-        return {"Module Average" : 0.0, "Letter_Grade": "Pending", "Module GPA": 0.0, "Weight Graded": 0.0}
+        return {"Module Average": 0.0, "Letter_Grade": "Pending", "Module GPA": 0.0, "Weight Graded": 0.0}
     
-    
+
     final_running_percentage = (earned_assessment_percentage / total_assessment_percentage) * 100
     
-    
+
     if "Percentage" in system:
         final_module_gpa = final_running_percentage
         final_letter = convert_percentage_to_class(final_running_percentage)
@@ -208,24 +205,21 @@ def calculate_module_gpa(module_code):
         else:
             final_letter = get_us_letter_from_points(final_module_gpa)
     
-    return {
-        "Module Average" : final_running_percentage,
-        "Letter_Grade" : final_letter,
-        "Module GPA" : round(final_module_gpa, 2),
-        "Weight Graded" : total_assessment_percentage,
-        
-        "Evaluation Status" : "Fully Assessed" if total_assessment_percentage >= 100 else "Some graded assessments have yet to be registered.",
-        "Performance Status" : "Finalised Grade" if total_assessment_percentage >= 100 else "Provisional Grade, subject to improvement."
-        }
 
-# -----------------------------------------------------------------------------
-# > CALCULATE SEMESTER GPA & AGGREGATE STANDINGS
-# -----------------------------------------------------------------------------
+    return {
+        "Module Average": final_running_percentage,
+        "Letter_Grade": final_letter,
+        "Module GPA": round(final_module_gpa, 2),
+        "Weight Graded": total_assessment_percentage,
+        
+        "Evaluation Status": "Fully Assessed" if total_assessment_percentage >= 100 else "Some graded assessments have yet to be registered.",
+        "Performance Status": "Finalised Grade" if total_assessment_percentage >= 100 else "Provisional Grade, subject to improvement."
+    }
+
+
+
 def calculate_semester_gpa(trimester):
-    """
-    Aggregates all registered modules for a specific trimester, calculates 
-    the cumulative running average or GPA, and returns a comprehensive profile.
-    """
+
     user_profile = get_user_settings()
     if not user_profile:
         return {
@@ -235,12 +229,12 @@ def calculate_semester_gpa(trimester):
             "modules_graded": 0
         }
         
-    # Maps directly to your cloud schema configuration columns
+
     system = user_profile["grading_system"] 
     current_uid = get_current_user_id()
 
     try:
-        # 💡 STEP 1: Fetch modules table via Supabase for active user context
+
         response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("trimester", trimester).execute()
         rows = response.data if response.data else []
     except Exception:
@@ -259,13 +253,13 @@ def calculate_semester_gpa(trimester):
     accumulated_gpa_points = 0.0
     accumulated_raw_percentage = 0.0
     
-    # 💡 STEP 2: Loop through active modules list to harvest calculated averages
+
     for row in rows:
         mod_code = row["module_code"]
-        # Call your scale-aware running calculation engine
+
         scores = calculate_module_gpa(mod_code)
         
-        # Check against string fallback names to ignore ungraded runway
+
         if scores["Letter_Grade"] != "NG" and scores["Letter_Grade"] != "Pending":
             modules_with_grades += 1
             accumulated_gpa_points += float(scores["Module GPA"])
@@ -279,7 +273,7 @@ def calculate_semester_gpa(trimester):
             "modules_graded": 0
         }
     
-    # 💡 STEP 3: Multi-College Honours Evaluation Core Matrix
+
     if "Percentage" in system:
         overall_score = accumulated_raw_percentage / modules_with_grades
         
@@ -312,14 +306,8 @@ def calculate_semester_gpa(trimester):
     }
 
 
-# -----------------------------------------------------------------------------
-# > CALCULATE TARGET GPA SCORE PREDICTIVE OPTIMIZATION
-# -----------------------------------------------------------------------------
 def calculate_target_score(trimester):
-    """
-    Solves the predictive optimization fraction to display the required 
-    average mark needed on upcoming tasks to hit target honours.
-    """
+
     user_profile = get_user_settings()
     if not user_profile:
         return {
@@ -333,7 +321,7 @@ def calculate_target_score(trimester):
     current_uid = get_current_user_id()
 
     try:
-        # 💡 STEP 1: Fetch valid modules for the active student context
+
         response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("trimester", trimester).execute()
         module_rows = response.data if response.data else []
     except Exception:
@@ -350,22 +338,21 @@ def calculate_target_score(trimester):
     total_graded_percentage = 0.0
     total_secured_marks = 0.0
 
-    # Extract all valid module codes as a list to process a single optimized query
     valid_codes = [row["module_code"] for row in module_rows]
 
     try:
-        # 💡 STEP 2: Query ALL assessments for these valid modules in one network call!
+  
         ass_response = supabase.table("assessments").select("assessment_percentage, received_grade").eq("user_id", current_uid).in_("module_code", valid_codes).execute()
         assessments_data = ass_response.data if ass_response.data else []
     except Exception:
         assessments_data = []
 
-    # 💡 STEP 3: Aggregate achieved marks in memory via loop iteration
+
     for a_row in assessments_data:
         weight = float(a_row["assessment_percentage"])
         grade = a_row["received_grade"]
 
-        if grade is not None: # Checks for non-null cloud records cleanly
+        if grade is not None:
             total_graded_percentage += weight
             total_secured_marks += (weight / 100.0) * float(grade)
 
@@ -379,7 +366,7 @@ def calculate_target_score(trimester):
             "message": "Syllabus tracking complete. All grades have been submitted."
         }
 
-    # 💡 STEP 4: Resolve Point-to-Percentage Trajectory Deficits
+
     if "Percentage" in system:
         total_marks_needed = total_semester_syllabus_capacity * (target / 100.0)
         marks_deficit = total_marks_needed - total_secured_marks
@@ -417,10 +404,10 @@ def calculate_target_score(trimester):
             "message": "You have successfully secured enough absolute marks to achieve your target honours / GPA!"
         }
 
-    # 💡 STEP 5: Solve the Core Optimization Fraction
+
     required_avg = (marks_deficit / remaining_upcoming_marks) * 100.0
 
-    # 💡 STEP 6: Render UX Defensive Feedback Strings
+
     if required_avg > 100.0:
         return {
             "status": "Impossible",
