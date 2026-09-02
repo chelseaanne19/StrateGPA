@@ -13,7 +13,7 @@ shadcn_text("Instruction Manual", variant = "title", color = "navy")
 # 2. LOAD SETTINGS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user_profile = get_user_settings()
-system = user_profile["system"]
+system = user_profile["grading_system"]
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 3. INFORMATION GUIDE TABS
@@ -47,15 +47,15 @@ if selected_tab == "1. Initial Calibration":
         )
         ui.card(
             title = "Target Percentage:" if "Percentage" in system else "Target GPA:",
-            description = f"{user_profile["target_gpa"]:.0f}%" if "Percentage" in system else f"{user_profile["target_gpa"]}",
+            description = f"{user_profile["target_grade"]:.0f}%" if "Percentage" in system else f"{user_profile["target_grade"]}",
             )
         ui.card(
             title = "Autumn Teaching Weeks:",
-            description = f"{user_profile["teaching_weeks_autumn"]}",
+            description = f"{user_profile["weeks_autumn"]}",
                 )
         ui.card(
                 title = "Spring Teaching Weeks:",
-                description = f"{user_profile["teaching_weeks_spring"]}",
+                description = f"{user_profile["weeks_spring"]}",
                 )
     with columns[1]:
         items = [

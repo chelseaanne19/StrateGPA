@@ -1,15 +1,105 @@
 import streamlit as st
-from database import table_setup, get_user_settings, save_user_settings
+from database import get_user_settings, save_user_settings
 import streamlit_shadcn_ui as ui
 from streamlit_extras.steps import *
-from helper_functions import shadcn_text
+from helper_functions import shadcn_text, set_page
+from database import supabase
+# FUNCTION_TESTING123!
+setup = True
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 1. SETUP PAGE
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+st.set_page_config(page_title = "StrateGPA", layout = "centered")
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-# 1. WELCOME POP UP WINDOW
+# 2. SESSION STATE
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
+
 if "show_welcome" not in st.session_state:
     st.session_state.show_welcome = False
 
+
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 3. AUTHENTICATION
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+if st.session_state.user is None:
+    set_page("StrateGPA", "Log in securely.")
+
+    selected_tab = ui.tabs(options = ["Log In", "Sign Up"], key = "login_signup_tabs")
+
+    # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+    # a. LOGIN
+    # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+    if selected_tab == "Log In":
+        email = ui.input("Email", key = "login_email")
+        password = ui.input("Password", type = "password", key = "login_pass")
+        
+        if ui.button("Sign In", key = "signin_submit_btn"):
+            if email and password:
+                try:
+                    response = supabase.auth.sign_in_with_password({
+                        "email": email.strip(), 
+                        "password": password
+                    })
+
+                    if response.user:
+                        st.session_state.user = response.user
+                        st.session_state.user_id = response.user.id
+                        st.toast("Welcome back! Synchronising your workspace...")
+                        st.rerun()
+                    else:
+                        st.error("Authentication failed. Please verify credentials.")
+                except Exception as e:
+                    st.error(f"{e}")
+            else:
+                st.error("Please fill out both email and password fields.")
+
+    # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+    # b. SIGN UP
+    # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+    elif selected_tab == "Sign Up":
+        new_email = ui.input("Email", key = "reg_email")
+        new_password = ui.input("Password", type = "password", key = "reg_pass")
+        
+        if ui.button("Create Account", key = "signup_submit_btn"):
+            if new_email and new_password:
+                try:
+                    response = supabase.auth.sign_up({
+                        "email": new_email.strip(), 
+                        "password": new_password
+                    })
+
+                    if response.user:
+                        if response.session:
+                            st.session_state.user = response.user
+                            st.session_state.user_id = response.user.id
+
+                            st.success("Account created!")
+                            st.rerun()
+                except Exception as e:
+                    st.error(f"Sign up failed: {e}")
+            else:
+                st.error("Please specify an email and secure password matrix.")
+    st.stop()
+
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 4. LOAD AUTHENTICATED USER
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+user = st.session_state.user
+st.session_state.user_id = user.id
+user_profile = get_user_settings()
+
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 5. welcome window
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 @st.dialog(":material/school:")
 def welcome_message():
     shadcn_text("Welcome to StrateGPA!", variant = "title")
@@ -44,16 +134,9 @@ def welcome_message():
         st.rerun()
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-# 2. LOAD SETTINGS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-table_setup()
-user_profile = get_user_settings()
-
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-# 3. USER CONFIGURES SETTINGS
+# 4. USER CONFIGURES SETTINGS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 if user_profile is None:
-    st.set_page_config(page_title = "Welcome to StrateGPA", layout = "centered")
     st.markdown("# :material/school: StrateGPA")
     st.caption("Welcome to StrateGPA! Please enter the following details to configure the app.")
     st.write("____")
@@ -159,16 +242,29 @@ if user_profile is None:
                     if st.button("Back", key="back_3_error"):
                         s.previous()
     st.session_state.show_welcome = True
-
     st.write("____")
+    st.stop()
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 4. LOAD APP [SETTINGS HAVE ALREADY BEEN CONFIGURED]
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 else:
-    if st.session_state.get("show_welcome", True):
-        st.session_state.welcome_message = False
+    if st.session_state.get("show_welcome") == True:
+        st.session_state.show_welcome = False
         welcome_message()
+
+    with st.sidebar:
+        shadcn_text(f"User: {user.email}", variant = "subheading", color = "grey")
+        if ui.button("Log Out", key = "sidebar_logout_btn"):
+            try:
+                supabase.auth.sign_out()
+            finally:
+                st.session_state.user = None
+                st.session_state.user_id = None
+                st.session_state.show_welcome = False
+                st.rerun()
+
+        ui.separator()
     
     config_page = st.Page("views/configurations.py", title = "Module and Assessment Registration", icon = ":material/add:")
     grades_page = st.Page("views/grades_entry.py", title = "Grade Entry", icon = ":material/add:")

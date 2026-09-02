@@ -5,70 +5,19 @@ from supabase import create_client, Client
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # CLOUD INITIALISATION
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+SUPABASE_URL = st.secrets["supabase"]["SUPABASE_URL"].strip()
+SUPABASE_KEY = st.secrets["supabase"]["SUPABASE_KEY"].strip()
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_current_user_id():
     """
-    Ensures every user sesion has a unique identifier string.
-    Generates a temporary session token if a login module isn't connected yet.
+    Extracts authenticated user email session token
     """
-
-    if "user_id" not in st.session_state:
-        import uuid
-        st.session_state.user_id = f"anon{uuid.uuid4().hex[:8]}"
-
-    return st.session_state.user_id
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-# SQL TABLES
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-def table_setup():
-    # opening connection context manager
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-
-        # modules table
-        cur.execute('''
-                    CREATE TABLE IF NOT EXISTS modules (
-                        module_code TEXT PRIMARY KEY,
-                        module_title TEXT NOT NULL UNIQUE,
-                        trimester TEXT NOT NULL
-                        )
-                    ''')
-
-        # assessments table
-        cur.execute('''
-                    CREATE TABLE IF NOT EXISTS assessments (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        module_code TEXT NOT NULL,
-                        assessment_title TEXT NOT NULL,
-                        assessment_percentage INTEGER NOT NULL,
-                        must_pass_component INTEGER NOT NULL,
-                        week INTEGER NOT NULL,
-                        received_grade REAL DEFAULT NULL,
-                        component_scale TEXT DEFAULT "Standard 40% Pass",
-                        FOREIGN KEY (module_code) REFERENCES modules (module_code)
-                        ON DELETE CASCADE
-                        ON UPDATE CASCADE
-                        )
-                    ''')
-
-        # settings
-        cur.execute('''
-                    CREATE TABLE IF NOT EXISTS settings (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        institution_name TEXT NOT NULL,
-                        grading_system TEXT NOT NULL,
-                        target_gpa REAL NOT NULL,
-                        teaching_weeks_autumn INTEGER NOT NULL DEFAULT 12,
-                        teaching_weeks_spring INTEGER NOT NULL DEFAULT 14
-                        )
-                    ''')
-
-        conn.commit()
-
+    user_id = st.session_state.get("user_id")
+    if not user_id:
+        return None
+    return str(user_id).strip()
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # USER CONFIGURATIONS
@@ -79,6 +28,9 @@ def get_user_settings():
     """
 
     current_uid = get_current_user_id()
+
+    if not current_uid:
+        return None
     try:
         response = supabase.table("settings").select("*").eq("user_id", current_uid).execute()
         return response.data[0] if response.data else None
@@ -99,8 +51,15 @@ def save_user_settings(institution, system, target, teaching_weeks_autumn, teach
         "weeks_spring" : int(teaching_weeks_spring)
     }
 
-    supabase.table("settings").upsert(payload).execute()
-    return True
+    try:
+        response = supabase.table("settings").upsert(payload, on_conflict = "user_id").execute()
+        if not response.data:
+            raise RuntimeError("Supabase did not return the saved settings.")
+
+        return response.data[0]
+    except Exception as e:
+        raise RuntimeError(f"{e}") from e
+
 
 def clear_user_settings():
     """
@@ -115,259 +74,238 @@ def clear_user_settings():
 # DATAFRAMES
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def get_modules_dataframe():
-    # opening connection context manager
-    with sqlite3.connect(DB_NAME) as conn:
-        query = '''
-                SELECT
-                module_code AS 'Module Code',
-                module_title AS 'Module Title',
-                trimester AS 'Trimester'
-                FROM modules
-                '''
+    """
+    Gets all registered modules to return as a DataFrame
+    """
 
-        df = pd.read_sql_query(query, conn)
+    current_uid = get_current_user_id()
+    try:
+        response = supabase.table("modules").select("*").eq("user_id", current_uid).execute()
 
-    return df
+        if response.data:
+            df = pd.DataFrame(response.data)
+            df.rename(columns = {
+                "module_code" : "Module Code",
+                "module_title" : "Module Title",
+                "semester" : "Semester"
+            },
+            inplace = True)
+            return df
+        return pd.DataFrame(columns = ["Module Code", "Module Title", "Semester"])
+    except Exception:
+        return pd.DataFrame(columns = ["Module Code", "Module Title", "Semester"])
+
+
+
 
 def get_assessments_dataframe():
-    with sqlite3.connect(DB_NAME) as conn:
-        query = '''
-                SELECT
-                id AS 'Assessment ID',
-                assessment_title AS 'Assessment Title',
-                module_code AS 'Module Code',
-                assessment_percentage AS 'Weight %',
-                    CASE WHEN
-                    must_pass_component = 1
-                    THEN 'Yes'
-                    ELSE 'No'
-                    END AS 'Must Pass',
-                    week AS 'Week Due',
-                    CASE WHEN received_grade IS NOT NULL THEN PRINTF('%.1f%%', received_grade) ELSE 'Pending' END AS 'Result',
-                component_scale AS 'Component Scale'
-                FROM assessments
-                ORDER BY week ASC, module_code ASC
-                '''
+    """
+    Gets all registered assessments to return as a DataFrame
+    """
+    current_uid = get_current_user_id()
+    try:
+        response = supabase.table("assessments").select("*").eq("user_id", current_uid).execute()
 
-        df = pd.read_sql_query(query, conn)
+        if response.data:
+            df = pd.DataFrame(response.data)
+            df.rename(columns = {
+                "id" : "Assessment ID",
+                "assessment_title" : "Assessment Title",
+                "module_code" : "Module Code",
+                "assessment_percentage" : "Weight %",
+                "week" : "Week Due",
+                "component_scale" : "Component Scale"
+            },
+            inplace = True)
 
-    return df
+            if "must_pass_component" in df.columns:
+                df["Must Pass"] = df["must_pass_component"].map({1: "Yes", 0: "No"}).fillna("No")
+            else:
+                df["Must Pass"] = "No"
+
+            if "received_grade" in df.columns:
+                df["Result"] = df["received_grade"].apply(lambda x: f"{float(x):.1f%}" if pd.notna(x) else "Pending")
+            else:
+                df["Result"] = "Pending"
+
+
+            df["Semester"] = "Active"
+
+            return df[["Assessment ID", "Assessment Title", "Module Code", "Weight %", "Semester", "Must Pass", "Week Due", "Result", "Component Scale"]]
+
+        return pd.DataFrame(columns = ["Assessment ID", "Assessment Title", "Module Code", "Weight %", "Semester", "Must Pass", "Week Due", "Result", "Component Scale"])
+
+    except Exception:
+            return pd.DataFrame(columns = ["Assessment ID", "Assessment Title", "Module Code", "Weight %", "Semester", "Must Pass", "Week Due", "Result", "Component Scale"])
+
 
 def get_assessments_from(module_code):
-    with sqlite3.connect(DB_NAME) as conn:
-        query = '''
-                SELECT
-                    id,
-                    assessment_title,
-                    assessment_percentage,
-                    week,
-                    received_grade,
-                    component_scale
-                FROM assessments
-                WHERE module_code = ?
-                ORDER BY week ASC, id ASC
-                '''
-        df = pd.read_sql_query(query, conn, params = (module_code,))
-    return df
+    """
+    Gets all registered assessments from a certain module and returns as a DataFrame
+    """
+
+    current_uid = get_current_user_id()
+
+    try:
+        response = supabase.table("assessments").select("*").eq("user_id", current_uid).eq("module_code", module_code).execute()
+        if response.data:
+            df = pd.DataFrame(response.data)
+            df.rename(columns = {
+                "id" : "Assessment ID",
+                "assessment_title" : "Assessment Title",
+                "module_code" : "Module Code",
+                "assessment_percentage" : "Weight %",
+                "week" : "Week Due",
+                "component_scale" : "Component Scale"
+            },
+            inplace = True)
+
+            if "must_pass_component" in df.columns:
+                df["Must Pass"] = df["must_pass_component"].map({1: "Yes", 0: "No"}).fillna("No")
+            else:
+                df["Must Pass"] = "No"
+
+            if "received_grade" in df.columns:
+                df["Result"] = df["received_grade"].apply(lambda x: f"{float(x):.1f}%" if pd.notna(x) else "Pending")
+            else:
+                df["Result"] = "Pending"
+
+            df["Semester"] = "Active"
+
+            return df[["Assessment ID", "Assessment Title", "Module Code", "Weight %", "Semester", "Must Pass", "Week Due", "Result", "Component Scale"]]
+            
+        return pd.DataFrame(columns=["Assessment ID", "Assessment Title", "Module Code", "Weight %", "Semester", "Must Pass", "Week Due", "Result", "Component Scale"])
+    except Exception:
+        return pd.DataFrame(columns=["Assessment ID", "Assessment Title", "Module Code", "Weight %", "Semester", "Must Pass", "Week Due", "Result", "Component Scale"])
 
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # INSERTS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-def insert_module(code_input, title_input, trimester_input):
+def insert_module(code_input, title_input, semester):
+    """
+    Inserts module linked securely to the user session
+    """
+
+    current_uid = get_current_user_id()
+    payload = {
+        "user_id" : current_uid,
+        "module_code" : code_input.strip().upper(),
+        "module_title" : title_input.strip().upper(),
+        "semester" : semester
+    }
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cur = conn.cursor()
-
-            cur.execute('''
-                        INSERT INTO modules
-                        (module_code, module_title, trimester)
-                        VALUES
-                        (?, ?, ?)
-                        ''',
-                        (
-                            code_input,
-                            title_input,
-                            trimester_input
-                        )
-                        )
-
-            conn.commit()
+        supabase.table("modules").insert(payload).execute()
         return True
-    except sqlite3.IntegrityError:
+    except Exception:
         return False
 
 def insert_assessment(module_code, title, percentage, must_pass, weeks_list, is_final_exam, component_scale = None):
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cur = conn.cursor()
+    """
+    Inserts assessments linked securely to the user session.
+    Inserts dedicated row entries for each targeted week.
+    Handles exact remainder allocations for continuous assessments.
+    """
+    current_uid = get_current_user_id()
+    num_weeks = len(weeks_list)
 
-            # calculate assessment weighting
-            num_weeks = len(weeks_list)
-            base_weight = percentage // num_weeks
-            remainder = percentage % num_weeks
-
-            for index, week_num in enumerate(weeks_list):
-                display_title = f"{title} (Wk {week_num})" if num_weeks > 1 else title
-
-                if is_final_exam:
-                    row_weight = percentage
-                else:
-                    if index == num_weeks - 1: # last week
-                        row_weight = base_weight + remainder
-                    else:
-                        row_weight = base_weight
-
-
-                cur.execute('''
-                            INSERT INTO assessments
-                                (module_code,
-                                assessment_title,
-                                assessment_percentage,
-                                must_pass_component,
-                                week,
-                                received_grade,
-                                component_scale)
-                            VALUES
-                                (?, ?, ?, ?, ?, NULL, ?)
-                            ''',
-                            (
-                                module_code,
-                                display_title,
-                                row_weight,
-                                must_pass,
-                                week_num,
-                                component_scale
-                            )
-                            )
-            conn.commit()
-        return True
-    except sqlite3.IntegrityError:
+    if num_weeks == 0:
         return False
 
+    base_weight = int(percentage) // num_weeks
+    remainder = int(percentage) % num_weeks
+
+    payload_batch = []
+
+    for index, week_num in enumerate(weeks_list):
+        display_title = f"{title} (Wk {week_num})" if num_weeks > 1 and not is_final_exam else title
+
+        if is_final_exam:
+            row_weight = int(percentage)
+        else:
+            row_weight = base_weight + remainder if index == num_weeks - 1 else base_weight
+
+
+        payload_batch.append({
+            "user_id" : current_uid,
+            "module_code" : module_code,
+            "assessment_title" : display_title,
+            "assessment_percentage" : row_weight,
+            "must_pass_component" : int(must_pass),
+            "week" : int(week_num),
+            "component_scale" : component_scale,
+            "received_grade" : None
+        })
+
+    try:
+        supabase.table("assessments").insert(payload_batch).execute()
+        return True
+    except Exception:
+        return False
 
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # UPDATES
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-def update_module(old_code, new_code, new_title, new_trimester):
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cur = conn.cursor()
-            cur.execute("PRAGMA foreign_keys = ON")
+def update_module(old_code, new_code, new_title, new_semester):
+    """
+    Updates a module row's parameters inside cloud table.
+    """
 
-            cur.execute('''
-                        UPDATE modules
-                        SET
-                            module_code = ?,
-                            module_title = ?,
-                            trimester = ?
-                        WHERE
-                            module_code = ?
-                        ''',
-                        (
-                            new_code,
-                            new_title,
-                            new_trimester,
-                            old_code
-                        )
-                        )
-
-            conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
+    current_uid = get_current_user_id()
+    payload = {
+        "module_code" : new_code.strip().upper(),
+        "module_title" : new_title.strip(),
+        "semester" : new_semester
+    }
+    supabase.table("modules").update(payload).eq("user_id", current_uid).eq("module_code", old_code).execute()
+    return True
 
 def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week, component_scale = None):
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cur = conn.cursor()
-            cur.execute("PRAGMA foreign_keys = ON")
-
-            cur.execute('''
-                        UPDATE assessments
-                        SET
-                            module_code = ?,
-                            assessment_title = ?,
-                            assessment_percentage = ?,
-                            must_pass_component = ?,
-                            week = ?,
-                            component_scale = ?
-                        WHERE
-                            id = ?
-                        ''',
-                        (
-                            new_module_code,
-                            new_title,
-                            new_percentage,
-                            new_must_pass,
-                            new_week,
-                            component_scale,
-                            assessment_id
-                        )
-                        )
-            conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
+    """
+    Updates assessment row in cloud table.
+    """
+    payload = {
+        "assessment_title" : new_title,
+        "assessment_percentage" : int(new_percentage),
+        "must_pass_component" : int(new_must_pass),
+        "week" : int(new_week),
+        "component_scale" : component_scale
+    }
+    supabase.table("assessments").update(payload).eq("id", assessment_id).execute()
+    return True
 
 def update_assessment_grade(assessment_id, grade):
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cur = conn.cursor()
+    """
+    Inserts the achieved grade percentage to a specific assessment
+    """
 
-            cur.execute('''
-                        UPDATE assessments
-                        SET received_grade = ?
-                        WHERE id = ?
-                        ''',
-                        (
-                            grade,
-                            assessment_id
-                        )
-                        )
-            conn.commit()
+    try:
+        grade_payload = float(grade) if grade is not None else None
+        supabase.table("assessments").update({"received_grade" : grade_payload}).eq("id", assessment_id).execute()
         return True
-    except sqlite3.IntegrityError:
+    except Exception:
         return False
+
 
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # DELETES
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def delete_module(code_selected):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-
-        cur.execute("PRAGMA foreign_keys = ON")
-
-        cur.execute('''
-                    DELETE FROM modules
-                    WHERE module_code = ?
-                    ''',
-                    (
-                        code_selected,
-                    )
-                    )
-
-        conn.commit()
+    """
+    Deletes module from cloud table.
+    """
+    current_uid = get_current_user_id()
+    supabase.table("modules").delete().eq("user_id", current_uid).eq("module_code", code_selected).execute()
+    return True
 
 def delete_assessment(assessment_id):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-
-        cur.execute("PRAGMA foreign_keys = ON")
-
-        cur.execute('''
-                    DELETE FROM assessments
-                    WHERE id = ?
-                    ''',
-                    (
-                        assessment_id,
-                    )
-                    )
-
-        conn.commit()
+    """
+    Deletes assessment from cloud table.
+    """
+    supabase.table("assessments").delete().eq("id", assessment_id).execute()
+    return True
 
 
 
@@ -375,105 +313,151 @@ def delete_assessment(assessment_id):
 # FUNCTIONS FOR WEEKLY WORKLOAD PAGE [RETURNS DFS / DICTIONARIES]
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-# gets workload grouped by week, always filtered by trimester, and module if selected
-def get_weekly_workload(trimester, module_code = None):
-    with sqlite3.connect(DB_NAME) as conn:
-        query = '''
-                SELECT
-                    a.week as 'Week',
-                    SUM(a.assessment_percentage) AS 'Total Workload (%)',
-                    m.module_code AS 'Module'
-                FROM assessments a
-                JOIN modules m
-                ON m.module_code = a.module_code
-                WHERE trimester = ?
-                '''
+def get_weekly_workload(semester, module_code = None):
+    """
+    Aggregates workload percentages categorised by academic week numbers.
+    """
 
-        # trimester must always be filtered
-        params = [trimester]
+    current_uid = get_current_user_id()
+    try:
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        valid_codes = [row["module_code"] for row in mod_response.data] if mod_response.data else []
 
-        # optional filter of module
+        if not valid_codes:
+            return pd.DataFrame(columns = ["Week", "Total Workload (%)", "Module"])
+
+        query = supabase.table("assessments").select("week, assessment_percentage, module_code").eq("user_id", current_uid).in_("module_code", valid_codes)
+
+
+        if module_code:
+            query = query.eq("module_code", module_code)
+        ass_response = query.execute()
+
+        if not ass_response.data:
+            return pd.DataFrame(columns = ["Week", "Total Workload (%)", "Module Code"])
+
+        df = pd.DataFrame(ass_response.data)
+        df_grouped = df.groupby("week")["assessment_percentage"].sum().reset_indeX()
+        df_grouped.columns = ["Week", "Total Workload (%)", "Module"]
+        return df_grouped.sort_values("Week")
+
+    except Exception:
+        return pd.DataFrame(columns = ["Week", "Total Workload (%)", "Module"])
+
+def get_week_contributors(semester, target_week):
+    """
+    Lists unique module codes that have assessments due in target week.
+    """
+    current_uid = get_current_user_id()
+
+    try:
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        valid_codes = [r["module_code"] for r in (mod_response.data or []) if row.get("module_code")]
+
+        if not valid_codes:
+            return pd.DataFrame(columns = ["module_code"])
+
+        response = supabase.table("assessments").select("module_code").eq("user_id", current_uid).eq("week", int(week_num)).in_("module_code", valid_codes).execute()
+        if response.data:
+            df_contributors = pd.DataFrame(response.data)
+            return df_contributors
+        return pd.DataFrame(columns = ["module_code"])
+    except Exception:
+        return pd.DataFrame(columns = ["module_code"])
+
+
+
+def get_grade_progress(semester, module_code = None):
+    """
+    Computers total graded scores user has achieved vs upcoming marks.
+    """
+
+    current_uid = get_current_user_id()
+    try:
+
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        valid_codes = [row["module_code"] for row in mod_response.data] if mod_response.data else []
+        
+        if not valid_codes:
+            return {"total_weight": 0.0, "completed_weight": 0.0, "earned_points": 0.0, "upcoming_weight": 0.0}
+            
+
+        query = supabase.table("assessments").select("module_code, assessment_percentage, received_grade").eq("user_id", current_uid).in_("module_code", valid_codes)
+        
         if module_code is not None:
-            params.append(module_code)
-            query += " AND m.module_code = ?"
+            query = query.eq("module_code", module_code)
+            
+        response = query.execute()
+        
+        if not response.data:
+            return {"total_weight": 0.0, "completed_weight": 0.0, "earned_points": 0.0, "upcoming_weight": 0.0}
+            
 
-
-        # complete query
-        query += " GROUP BY a.week, m.module_code ORDER BY a.week ASC"
-
-        df = pd.read_sql_query(query, conn, params = tuple(params))
-        return df
-
-# gets weekly workload contributors as modules
-def get_week_contributors(trimester, target_week):
-    with sqlite3.connect(DB_NAME) as conn:
-        query = ''' 
-                SELECT
-                    m.module_code AS 'Module Code',
-                    m.module_title AS 'Module Title',
-                    SUM(a.assessment_percentage) AS 'Contribution (%)'
-                    FROM assessments a
-                    JOIN modules m ON m.module_code = a.module_code
-                    WHERE m.trimester = ? AND a.week = ?
-                    GROUP BY m.module_code
-                    ORDER BY [Contribution (%)] DESC
-                '''
-
-        df = pd.read_sql_query(query, conn, params = (trimester, target_week))
-
-    return df
-
-def get_grade_progress(trimester, module_code = None):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        query = '''
-            SELECT 
-                COALESCE(SUM(a.assessment_percentage), 0) AS total_weight,
-                COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN a.assessment_percentage ELSE 0 END), 0) AS completed_weight,
-                COALESCE(SUM(CASE WHEN a.received_grade IS NOT NULL THEN (a.assessment_percentage * (a.received_grade / 100.0)) ELSE 0 END), 0) AS earned_points
-            FROM assessments a
-            JOIN modules m ON a.module_code = m.module_code
-            WHERE m.trimester = ?
-        '''
-    
-        params = [trimester]
-
-        if module_code is not None:
-            query += " AND a.module_code = ?"
-            params.append(module_code)
+        df = pd.DataFrame(response.data)
         
 
-        cur.execute(query, tuple(params))
-        row = cur.fetchone()
+        df["assessment_percentage"] = df["assessment_percentage"].astype(float)
+        df["received_grade"] = pd.to_numeric(df["received_grade"], errors='coerce')
         
-        total_weight = float(row[0])
-        completed_weight = float(row[1])
-        earned_points = float(row[2])
+
+        total_weight = df["assessment_percentage"].sum()
+        
+
+        completed_df = df[df["received_grade"].notna()]
+        completed_weight = completed_df["assessment_percentage"].sum()
+
+
+        earned_points = (completed_df["assessment_percentage"] * (completed_df["received_grade"] / 100.0)).sum()
+        
         upcoming_weight = total_weight - completed_weight
         
-    return {
-        "total_weight": total_weight,
-        "completed_weight": completed_weight,
-        "earned_points": earned_points,
-        "upcoming_weight": upcoming_weight
-    }
+        return {
+            "total_weight": total_weight,
+            "completed_weight": completed_weight,
+            "earned_points": earned_points,
+            "upcoming_weight": upcoming_weight
+        }
+    except Exception:
+        return {"total_weight": 0.0, "completed_weight": 0.0, "earned_points": 0.0, "upcoming_weight": 0.0}
+
+
 
 # Gets assessments due for the week
-def get_week_agenda(trimester, target_week):
-    with sqlite3.connect(DB_NAME) as conn:
-        query = '''
-                SELECT
-                    a.id AS 'Assessment ID',
-                    a.module_code AS 'Module Code',
-                    a.assessment_title AS 'Assessment Title',
-                    a.assessment_percentage AS 'Weight %',
-                    a.must_pass_component AS 'Must Pass',
-                    a.received_grade AS 'Received Grade'
-                FROM assessments a
-                JOIN modules m on a.module_code = m.module_code
-                WHERE m.trimester = ? AND a.week = ?
-                ORDER BY a.module_code ASC
-                '''
+def get_week_agenda(semester, target_week):
+    """
+    Queries all registered assessments due in a specific week for the active semester.
+    """
+    current_uid = get_current_user_id()
+    try:
 
-        df = pd.read_sql_query(query, conn, params = (trimester, target_week))
-        return df
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        valid_codes = [row["module_code"] for row in mod_response.data] if mod_response.data else []
+        
+        if not valid_codes:
+            return pd.DataFrame(columns=["Assessment ID", "Module Code", "Assessment Title", "Weight %", "Must Pass", "Received Grade"])
+            
+
+        response = supabase.table("assessments").select("id, module_code, assessment_title, assessment_percentage, must_pass_component, received_grade").eq("user_id", current_uid).eq("week", int(target_week)).in_("module_code", valid_codes).order("module_code").execute()
+        
+        if not response.data:
+            return pd.DataFrame(columns=["Assessment ID", "Module Code", "Assessment Title", "Weight %", "Must Pass", "Received Grade"])
+            
+
+        df = pd.DataFrame(response.data)
+        
+        df.rename(columns = {
+            "id": "Assessment ID",
+            "module_code": "Module Code",
+            "assessment_title": "Assessment Title",
+            "assessment_percentage": "Weight %"
+        }, inplace = True)
+        
+
+        df["Must Pass"] = df["must_pass_component"].map({1: "Yes", 0: "No"}).fillna("No")
+        df["Received Grade"] = df["received_grade"].apply(lambda x: f"{float(x):.1f}%" if pd.notna(x) else "Pending")
+        
+
+        return df[["Assessment ID", "Module Code", "Assessment Title", "Weight %", "Must Pass", "Received Grade"]]
+        
+    except Exception:
+        return pd.DataFrame(columns=["Assessment ID", "Module Code", "Assessment Title", "Weight %", "Must Pass", "Received Grade"])

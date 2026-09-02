@@ -15,3 +15,5 @@ __pycache__/
 # Streamlit Local Configurations
 .streamlit/config.toml
 .streamlit/secrets.toml
+.claude/
+.agents/

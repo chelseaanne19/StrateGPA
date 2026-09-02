@@ -29,7 +29,7 @@ ui.separator()
 if df_modules.empty:
     st.info("No courses registered yet. Please navigate to **Module and Assessment Registration** to add modules and assessments")
 else:
-    semester_modules = df_modules[df_modules["Trimester"] == selected_semester]
+    semester_modules = df_modules[df_modules["Semester"] == selected_semester]
 
     if semester_modules.empty:
         st.warning(f"No registered modules located for {selected_semester}.")

@@ -40,7 +40,7 @@ active_week = st.session_state.current_week
 
 df_modules = get_modules_dataframe()
 if not df_modules.empty:
-    semester_modules = df_modules[df_modules["Trimester"] == selected_semester]["Module Code"].tolist()
+    semester_modules = df_modules[df_modules["Semester"] == selected_semester]["Module Code"].tolist()
 else:
     semester_modules = []
 
@@ -91,9 +91,9 @@ shadcn_text(f"{selected_module}", variant = "subheading")
 user_profile = get_user_settings()
 
 if selected_semester == "Autumn":
-    max_teaching_weeks = user_profile["teaching_weeks_autumn"] if user_profile else 12
+    max_teaching_weeks = user_profile["weeks_autumn"] if user_profile else 12
 else:
-    max_teaching_weeks = user_profile["teaching_weeks_spring"] if user_profile else 14
+    max_teaching_weeks = user_profile["weeks_spring"] if user_profile else 14
 
 show_exams = st.toggle(f"Include End-of-Semester Assessments (Weeks {max_teaching_weeks + 1}+)", value = True, help = "Toggle off to better view your semester workload before exams.")
 

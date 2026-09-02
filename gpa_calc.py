@@ -1,6 +1,7 @@
 import sqlite3
 import pandas as pd
-from database import DB_NAME, get_user_settings
+from database import get_user_settings, get_current_user_id
+import supabase
 
 def convert_ucd_mark_to_grade(percentage, scale_type = "Standard 40% Pass"):
     """
@@ -140,7 +141,7 @@ def calculate_module_gpa(module_code):
     '''
 
     user_profile = get_user_settings()
-    system = user_profile["system"]
+    system = user_profile["grading_system"]
     
     
     with sqlite3.connect(DB_NAME) as conn:
@@ -217,47 +218,54 @@ def calculate_module_gpa(module_code):
         "Performance Status" : "Finalised Grade" if total_assessment_percentage >= 100 else "Provisional Grade, subject to improvement."
         }
 
+# -----------------------------------------------------------------------------
+# > CALCULATE SEMESTER GPA & AGGREGATE STANDINGS
+# -----------------------------------------------------------------------------
 def calculate_semester_gpa(trimester):
-    # get modules table to get all courses for term
-    # loop through modules to get module gpa
-    # get grade and gpa and honours etc.
-    
+    """
+    Aggregates all registered modules for a specific trimester, calculates 
+    the cumulative running average or GPA, and returns a comprehensive profile.
+    """
     user_profile = get_user_settings()
-    system = user_profile["system"]
-    
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
+    if not user_profile:
+        return {
+            "overall_score": 0.0,
+            "classification": "Uncalibrated Profile",
+            "modules_tracked": 0,
+            "modules_graded": 0
+        }
         
-        cur.execute('''
-                    SELECT
-                        module_code
-                    FROM
-                        modules
-                    WHERE
-                        trimester = ?
-                    ''',
-                    (trimester,)
-                    )
-        
-        rows = cur.fetchall()
+    # Maps directly to your cloud schema configuration columns
+    system = user_profile["grading_system"] 
+    current_uid = get_current_user_id()
+
+    try:
+        # 💡 STEP 1: Fetch modules table via Supabase for active user context
+        response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("trimester", trimester).execute()
+        rows = response.data if response.data else []
+    except Exception:
+        rows = []
 
     if not rows:
         return {
-            "overall_score" : 0.0,
-            "classification" : "No Registered Modules Located.",
-            "modules_tracked" : 0,
-            "modules_graded" : 0
-            }
+            "overall_score": 0.0,
+            "classification": "No Registered Modules Located.",
+            "modules_tracked": 0,
+            "modules_graded": 0
+        }
     
     total_module_count = len(rows)
     modules_with_grades = 0
     accumulated_gpa_points = 0.0
     accumulated_raw_percentage = 0.0
     
+    # 💡 STEP 2: Loop through active modules list to harvest calculated averages
     for row in rows:
-        mod_code = row[0]
+        mod_code = row["module_code"]
+        # Call your scale-aware running calculation engine
         scores = calculate_module_gpa(mod_code)
         
+        # Check against string fallback names to ignore ungraded runway
         if scores["Letter_Grade"] != "NG" and scores["Letter_Grade"] != "Pending":
             modules_with_grades += 1
             accumulated_gpa_points += float(scores["Module GPA"])
@@ -265,13 +273,13 @@ def calculate_semester_gpa(trimester):
     
     if modules_with_grades == 0:
         return {
-            "overall_score" : 0.0,
+            "overall_score": 0.0,
             "classification": "Awaiting Grades",
-            "modules_tracked" : total_module_count,
-            "modules_graded" : 0
-            }
+            "modules_tracked": total_module_count,
+            "modules_graded": 0
+        }
     
-
+    # 💡 STEP 3: Multi-College Honours Evaluation Core Matrix
     if "Percentage" in system:
         overall_score = accumulated_raw_percentage / modules_with_grades
         
@@ -280,7 +288,6 @@ def calculate_semester_gpa(trimester):
         elif overall_score >= 50.0: classification_badge = "Second Class Honours, Grade 2 (2:2)"
         elif overall_score >= 40.0: classification_badge = "Pass Degree"
         else: classification_badge = "Fail"
-    
     else:
         overall_score = accumulated_gpa_points / modules_with_grades
         
@@ -295,85 +302,84 @@ def calculate_semester_gpa(trimester):
             elif overall_score >= 3.65: classification_badge = "Magna Cum Laude (High Honours)"
             elif overall_score >= 3.50: classification_badge = "Cum Laude (Honours)"
             elif overall_score >= 2.00: classification_badge = "Good Academic Standing"
-            else: classification_badge ="Fail"
-    
-    
+            else: classification_badge = "Fail"
 
     return {
-        "overall_score" : round(overall_score, 2),
-        "classification" : classification_badge,
-        "modules_tracked" : total_module_count,
-        "modules_graded" : modules_with_grades
-        }
+        "overall_score": round(overall_score, 2),
+        "classification": classification_badge,
+        "modules_tracked": total_module_count,
+        "modules_graded": modules_with_grades
+    }
 
+
+# -----------------------------------------------------------------------------
+# > CALCULATE TARGET GPA SCORE PREDICTIVE OPTIMIZATION
+# -----------------------------------------------------------------------------
 def calculate_target_score(trimester):
+    """
+    Solves the predictive optimization fraction to display the required 
+    average mark needed on upcoming tasks to hit target honours.
+    """
     user_profile = get_user_settings()
     if not user_profile:
         return {
             "status": "uncalibrated",
-            "required_mark" : 0.0,
-            "message" : "system profile settings missing"
+            "required_mark": 0.0,
+            "message": "system profile settings missing"
         }
 
-    system = user_profile["system"]
-    target = user_profile["target_gpa"]
+    system = user_profile["grading_system"]
+    target = float(user_profile["target_grade"])
+    current_uid = get_current_user_id()
 
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        cur.execute('''
-                        SELECT module_code
-                        FROM modules
-                        WHERE trimester = ?
-                        ''',
-                        (trimester,)
-                        )
-        module_rows = cur.fetchall()
+    try:
+        # 💡 STEP 1: Fetch valid modules for the active student context
+        response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("trimester", trimester).execute()
+        module_rows = response.data if response.data else []
+    except Exception:
+        module_rows = []
 
     if not module_rows:
         return {
-            "status" : "No Modules",
-            "required_mark" : 0.0,
-            "message" : "Please register modules first."
+            "status": "No Modules",
+            "required_mark": 0.0,
+            "message": "Please register modules first."
         }
 
     total_modules = len(module_rows)
     total_graded_percentage = 0.0
-    total_secured_points = 0.0
     total_secured_marks = 0.0
 
-    for row in module_rows:
-        mod_code = row[0]
+    # Extract all valid module codes as a list to process a single optimized query
+    valid_codes = [row["module_code"] for row in module_rows]
 
-        with sqlite3.connect(DB_NAME) as conn:
-            query = '''
-                    SELECT
-                        assessment_percentage,
-                        received_grade
-                    FROM assessments
-                    WHERE module_code = ?
-                    '''
-            df = pd.read_sql_query(query, conn, params = (mod_code,))
+    try:
+        # 💡 STEP 2: Query ALL assessments for these valid modules in one network call!
+        ass_response = supabase.table("assessments").select("assessment_percentage, received_grade").eq("user_id", current_uid).in_("module_code", valid_codes).execute()
+        assessments_data = ass_response.data if ass_response.data else []
+    except Exception:
+        assessments_data = []
 
-        for idx, a_row in df.iterrows():
-            weight = float(a_row["assessment_percentage"])
-            grade = a_row["received_grade"]
+    # 💡 STEP 3: Aggregate achieved marks in memory via loop iteration
+    for a_row in assessments_data:
+        weight = float(a_row["assessment_percentage"])
+        grade = a_row["received_grade"]
 
-            if pd.notna(grade):
-                total_graded_percentage += weight
-                total_secured_marks += (weight / 100.0) * float(grade)
+        if grade is not None: # Checks for non-null cloud records cleanly
+            total_graded_percentage += weight
+            total_secured_marks += (weight / 100.0) * float(grade)
 
-
-    total_semester_syllabus_capacity = total_modules * 100 # e.g. 6 modules * 100 = 600 marks available
+    total_semester_syllabus_capacity = total_modules * 100 
     remaining_upcoming_marks = total_semester_syllabus_capacity - total_graded_percentage
 
     if remaining_upcoming_marks <= 0:
         return {
-            "status" : "Concluded",
-            "required_mark" : 0.0,
-            "message" : "Syllabus tracking complete. All grades have been submitted."
+            "status": "Concluded",
+            "required_mark": 0.0,
+            "message": "Syllabus tracking complete. All grades have been submitted."
         }
 
-
+    # 💡 STEP 4: Resolve Point-to-Percentage Trajectory Deficits
     if "Percentage" in system:
         total_marks_needed = total_semester_syllabus_capacity * (target / 100.0)
         marks_deficit = total_marks_needed - total_secured_marks
@@ -406,29 +412,30 @@ def calculate_target_score(trimester):
 
     if marks_deficit <= 0:
         return {
-            "status" : "Secured",
-            "required_mark" : 0.0,
-             "message" : "You have successfully secured enough absolute marks to achieve your target honours / GPA!"
+            "status": "Secured",
+            "required_mark": 0.0,
+            "message": "You have successfully secured enough absolute marks to achieve your target honours / GPA!"
         }
 
+    # 💡 STEP 5: Solve the Core Optimization Fraction
     required_avg = (marks_deficit / remaining_upcoming_marks) * 100.0
 
-
+    # 💡 STEP 6: Render UX Defensive Feedback Strings
     if required_avg > 100.0:
         return {
-            "status" : "Impossible",
+            "status": "Impossible",
             "required_mark": required_avg,
-            "message" : f"**Mathematically Out of Scope**: You would need an average of {required_avg:.2f}% across your remaining assessments to achieve the target GPA / Honours"
+            "message": f"**Mathematically Out of Scope**: You would need an average of {required_avg:.2f}% across your remaining assessments to achieve the target GPA / Honours."
         }
     elif required_avg < 40.0:
         return {
-            "status" : "Safe Scope",
-            "required_mark" : required_avg,
-            "message" :f"**Comfortable Buffer**: You need an average of {required_avg:.2f}% across your remaining assessments to achieve your target GPA / Honours. Stay consistent!"
+            "status": "Safe Scope",
+            "required_mark": required_avg,
+            "message": f"**Comfortable Buffer**: You need an average of {required_avg:.2f}% across your remaining assessments to achieve your target GPA / Honours. Stay consistent!"
         }
     else:
         return {
-            "status" : "On Track",
-            "required_mark" : required_avg,
+            "status": "On Track",
+            "required_mark": required_avg,
             "message": f"**On Track**: You need an average of {required_avg:.2f}% across your remaining assessments to achieve your target GPA / Honours."
         }

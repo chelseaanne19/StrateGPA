@@ -33,13 +33,13 @@ icon_col, icon_text = st.columns([0.02, 0.98], gap = "small")
 with icon_col:
     st.markdown("#### :material/book:") 
 with icon_text:
-    if "Percentage" in user_profile["system"]:
+    if "Percentage" in user_profile["grading_system"]:
         shadcn_text("Current Honours Grade Standing", variant = "heading")
     else:
         shadcn_text("Current GPA Standing", variant = "heading")
 
 ui.metric_card(
-        f"{selected_semester} Standing" if "Percentage" in user_profile["system"] else f"{selected_semester} GPA" ,
+        f"{selected_semester} Standing" if "Percentage" in user_profile["grading_system"] else f"{selected_semester} GPA" ,
         semester_standings["overall_score"],
         delta = semester_standings["classification"]
     )
@@ -58,7 +58,7 @@ with icon_text_1:
 if df_modules.empty:
     st.info("No courses registered yet. Navigate to **Module and Assessment Registration** to build your syllabus.")
 else:
-    semester_modules = df_modules[df_modules["Trimester"] == selected_semester]
+    semester_modules = df_modules[df_modules["Semester"] == selected_semester]
     
     if semester_modules.empty:
         st.warning(f"No registered modules located for {selected_semester}.")
@@ -100,7 +100,7 @@ icon_col_2, icon_text_2 = st.columns([0.02, 0.98], gap = "small")
 with icon_col_2:
     st.markdown("#### :material/book:") 
 with icon_text_2:
-    if "Percentage" in user_profile["system"]:
+    if "Percentage" in user_profile["grading_system"]:
         shadcn_text("Honours Target", variant = "heading")
     else:
         shadcn_text("GPA Target", variant = "heading")

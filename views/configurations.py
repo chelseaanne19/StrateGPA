@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from database import (
-    table_setup, get_modules_dataframe, get_assessments_dataframe,
+    get_modules_dataframe, get_assessments_dataframe,
     insert_module, delete_module, update_module,
     insert_assessment, delete_assessment, update_assessment,
     get_user_settings
@@ -21,7 +21,6 @@ set_page("Module and Assessment Registration", "Register your modules and assess
 user_profile = get_user_settings()
 df_modules = get_modules_dataframe()
 df_assessments = get_assessments_dataframe()
-table_setup()
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 3. SESSION STATE FLAGS FOR DIALOG WINDOWS
@@ -80,17 +79,17 @@ def edit_module_submission(orig_module_code):
         return
 
     orig_module_title = resulting_row["Module Title"].values[0]
-    orig_trimester = resulting_row["Trimester"].values[0]
-    trimester_index = 1 if orig_trimester == "Autumn" else 1
+    orig_semester = resulting_row["Semester"].values[0]
+    semester_index = 1 if orig_semester == "Autumn" else 1
 
     with st.form("edit_module_form"):
         new_code = ui.input("Enter new module code:", value = orig_module_code, key = "new_mod_code")
         new_title = ui.input("Enter new module title:", value = orig_module_title, key = "new_mod_title")
-        new_trimester = ui.select("Choose correct semester:", options = ["Spring", "Autumn"], index = trimester_index, key = "new_mod_trimester")
+        new_semester = ui.select("Choose correct semester:", options = ["Spring", "Autumn"], index = semester_index, key = "new_mod_semester")
 
         if st.form_submit_button("Confirm Module Details", key = "confirm_module_details"):
             if new_code.strip() and new_title.strip():
-                success = update_module(orig_module_code, new_code.strip(), new_title.strip(), new_trimester)
+                success = update_module(orig_module_code, new_code.strip(), new_title.strip(), new_semester)
 
                 if success:
                     st.session_state.trigger_edit_module = False
@@ -126,14 +125,14 @@ def edit_assessment_submission(assessment_id):
         new_percentage = st.slider("Enter correct weighting:", 0, 100, value = orig_percentage, key = "new_ass_weighting")
         new_must_pass = st.toggle("Must Pass Component", value = bool_must_pass, key = "new_must_pass")
         new_week = ui.select("Select correct week assessment is due:", options = list(range(1, 18)), index = orig_week - 1, key = "new_ass_weeks_list")
-        if "UCD" in user_profile["system"]:
+        if "UCD" in user_profile["grading_system"]:
             new_component_scale = ui.select("Select correct component scale:", options = scale_list, index = scale_index, key = "new_component_scale")
 
         if st.form_submit_button("Confirm Assessment Details", key = "confirm_assessment_details"):
             if new_title.strip() and new_code and new_week:
                 must_pass_int = 1 if new_must_pass else 0
 
-                success = update_assessment(assessment_id, new_code, new_title.strip(), new_percentage, must_pass_int, new_week, component_scale = new_component_scale if "UCD" in user_profile["system"] else None)
+                success = update_assessment(assessment_id, new_code, new_title.strip(), new_percentage, must_pass_int, new_week, component_scale = new_component_scale if "UCD" in user_profile["grading_system"] else None)
 
                 if success:
                     st.session_state.trigger_edit_assessment = False
@@ -190,7 +189,7 @@ def render_module_section():
             with st.container(border = True):
                 module_code = ui.input("Enter Module Code", placeholder = "e.g. COMP10030")
                 module_title = ui.input("Enter Module Title")
-                semester = ui.select("Choose Trimester", options = ["Autumn", "Spring"])
+                semester = ui.select("Choose Semester", options = ["Autumn", "Spring"])
 
            
                 trigger_btn = ui.button("Register Module")
@@ -259,13 +258,13 @@ def render_assessment_section():
                 module_code = ui.select("Assign Module Code for Assessment", options = module_options, key = "new_module_code")
 
                 if not df_modules.empty and module_code:
-                    current_trimester = df_modules[df_modules["Module Code"] == module_code]["Trimester"].values[0]
+                    current_semester = df_modules[df_modules["Module Code"] == module_code]["Semester"].values[0]
                 else:
-                    current_trimester = "Autumn"
+                    current_semester = "Autumn"
 
                 # getting configured exam weeks for that semester
                 if user_profile:
-                    teaching_weeks = user_profile["teaching_weeks_autumn"] if current_trimester == "Autumn" else user_profile["teaching_weeks_spring"]
+                    teaching_weeks = user_profile["weeks_autumn"] if current_semester == "Autumn" else user_profile["weeks_spring"]
                     exam_weeks = list(range(teaching_weeks + 1, teaching_weeks + 4))
                     exam_weeks_str = ", ".join(map(str, exam_weeks))
                 else:
@@ -278,7 +277,7 @@ def render_assessment_section():
 
             # form submission
             with st.form("new_assessment_form", clear_on_submit = True):
-                if "UCD" in user_profile["system"]:
+                if "UCD" in user_profile["grading_system"]:
                     tab_title, tab_weeks, tab_weightings, tab_scales = st.tabs(["Title", "Weeks", "Weightings", "Component Scale"])
                 else:
                     tab_title, tab_weeks, tab_weightings = st.tabs(["Title", "Week", "Weightings"])
@@ -290,7 +289,7 @@ def render_assessment_section():
                     if is_final_exam:
                         st.info(
                             f"**Automated Exam Placement:** This assessment will be automatically "
-                            f"registered across your configured exam block (**Weeks {exam_weeks_str}**) for {current_trimester}.\n\n"
+                            f"registered across your configured exam block (**Weeks {exam_weeks_str}**) for {current_semester}.\n\n"
                             f"*NOTE: If you already happen to know the exact specific week of your exam, toggle "
                             f"this switch OFF and log the target week manually instead!*")
                         weeks = exam_weeks
@@ -310,11 +309,11 @@ def render_assessment_section():
                     st.space("small")
                     must_pass = st.toggle("Must Pass Component")
 
-                if "UCD" in user_profile["system"]:
+                if "UCD" in user_profile["grading_system"]:
                     with tab_scales:
                         selected_scale = "Standard 40% Pass"
 
-                        if user_profile and "UCD" in user_profile["system"]:
+                        if user_profile and "UCD" in user_profile["grading_system"]:
                             st.write("UCD Mark To Grade Component Scales")
 
                             selected_scale = ui.select(
@@ -326,7 +325,7 @@ def render_assessment_section():
                 
                 if st.form_submit_button("Create Assessment"):
                     if module_code and title and weeks:
-                        confirm_assessment_submission(module_code, title, percentage, must_pass, weeks, is_final_exam, component_scale = None if "UCD" not in user_profile["system"] else selected_scale)
+                        confirm_assessment_submission(module_code, title, percentage, must_pass, weeks, is_final_exam, component_scale = None if "UCD" not in user_profile["grading_system"] else selected_scale)
                     else:
                         st.error("Please fill in all fields.")
 
