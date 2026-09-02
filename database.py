@@ -1,9 +1,26 @@
-import sqlite3
+import streamlit as st
 import pandas as pd
+from supabase import create_client, Client
 
-# DATABASE FILE NAME
-DB_NAME = "modules_and_assessments.db"
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# CLOUD INITIALISATION
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def get_current_user_id():
+    """
+    Ensures every user sesion has a unique identifier string.
+    Generates a temporary session token if a login module isn't connected yet.
+    """
+
+    if "user_id" not in st.session_state:
+        import uuid
+        st.session_state.user_id = f"anon{uuid.uuid4().hex[:8]}"
+
+    return st.session_state.user_id
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # SQL TABLES
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
@@ -57,65 +74,41 @@ def table_setup():
 # USER CONFIGURATIONS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def get_user_settings():
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
+    """
+    Fetches user settings from the Supabase cloud table
+    """
 
-        cur.execute('''
-                    SELECT
-                        institution_name,
-                        grading_system,
-                        target_gpa,
-                        teaching_weeks_autumn,
-                        teaching_weeks_spring
-                    FROM settings
-                    LIMIT 1
-                    ''')
-
-        row = cur.fetchone()
-
-    if row:
-        return{"institution" : row[0],
-               "system" : row[1],
-               "target_gpa" : row[2],
-               "teaching_weeks_autumn" : int(row[3]),
-               "teaching_weeks_spring" : int(row[4])}
-
-    return None
+    current_uid = get_current_user_id()
+    try:
+        response = supabase.table("settings").select("*").eq("user_id", current_uid).execute()
+        return response.data[0] if response.data else None
+    except Exception:
+        return None
 
 def save_user_settings(institution, system, target, teaching_weeks_autumn, teaching_weeks_spring):
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM settings")
-            cur.execute('''
-                        INSERT INTO settings
-                        (institution_name,
-                        grading_system,
-                        target_gpa,
-                        teaching_weeks_autumn,
-                        teaching_weeks_spring)
-                        VALUES
-                        (?, ?, ?, ?, ?)
-                        ''',
-                        (
-                        (institution, system, target, teaching_weeks_autumn, teaching_weeks_spring)
-                        )
-                        )
-            conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
+    """
+    Saves user profile records to Supabase database
+    """
+    current_uid = get_current_user_id()
+    payload = {
+        "user_id" : current_uid,
+        "institution" : institution,
+        "grading_system" : system,
+        "target_grade" : float(target),
+        "weeks_autumn" : int(teaching_weeks_autumn),
+        "weeks_spring" : int(teaching_weeks_spring)
+    }
+
+    supabase.table("settings").upsert(payload).execute()
+    return True
 
 def clear_user_settings():
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cur = conn.cursor()
-
-            cur.execute("DELETE FROM settings")
-            conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
+    """
+    Clears user settings to allow re-configuration
+    """
+    current_uid = get_current_user_id()
+    supabase.table("settings").delete().eq("user_id", current_uid).execute()
+    return True
 
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
