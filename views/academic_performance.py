@@ -3,28 +3,35 @@ import pandas as pd
 from database import get_modules_dataframe, get_user_settings
 from gpa_calc import calculate_module_gpa, calculate_semester_gpa, calculate_target_score
 import streamlit_shadcn_ui as ui
-from helper_functions import shadcn_text
+from helper_functions import shadcn_text, set_page
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 1. PAGE SETUP
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 st.set_page_config(page_title = "Academic Performance", layout = "wide")
+set_page("Academic Performance", "GPA metrics, track provisional and final grades, learn where work needs to improve")
 
-shadcn_text("Academic Performance", variant = "title", color = "navy")
-shadcn_text("GPA metrics, track provisional and final grades, learn where work needs to improve", variant = "subheading", color = "grey")
-st.write("____")
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 2. LOAD SETTINGS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+df_modules = get_modules_dataframe()
 user_profile = get_user_settings()
 
-selected_semester = ui.select("Choose semester",
-    options = ["Autumn", "Spring"]
-)
+with st.sidebar:
+    shadcn_text("Timeline", variant = "heading")
+    ui.separator()
+    selected_semester = ui.select("Semester", options = ["Autumn", "Spring"])
+    ui.separator()
+
 semester_standings = calculate_semester_gpa(selected_semester)
-ui.separator()
 
-# region Current Academic Standing
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 3. CURRENT ACADEMIC STANDING SUMMARY (GPA / HONOURS)
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 icon_col, icon_text = st.columns([0.02, 0.98], gap = "small")
 
 with icon_col:
-    st.markdown("### :material/book:") 
+    st.markdown("#### :material/book:") 
 with icon_text:
     if "Percentage" in user_profile["system"]:
         shadcn_text("Current Honours Grade Standing", variant = "heading")
@@ -37,19 +44,16 @@ ui.metric_card(
         delta = semester_standings["classification"]
     )
 st.write("____")
-#endregion
 
-
-# region Module Grades
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 4. MODULE GRADE SUMMARIES
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 icon_col_1, icon_text_1 = st.columns([0.02, 0.98], gap = "small")
 
 with icon_col_1:
-    st.markdown("### :material/book:") 
+    st.markdown("#### :material/book:") 
 with icon_text_1:
     shadcn_text("Module Grades", variant = "heading")
-
-df_modules = get_modules_dataframe()
 
 if df_modules.empty:
     st.info("No courses registered yet. Navigate to **Module and Assessment Registration** to build your syllabus.")
@@ -87,15 +91,14 @@ else:
                         description = f"Points Awarded {stats["Module GPA"]}"
                     )
 st.write("____")
-#endregion
 
-
-# region Honours / GPA Target
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 5. GPA / HONOURS TARGET
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 icon_col_2, icon_text_2 = st.columns([0.02, 0.98], gap = "small")
 
 with icon_col_2:
-    st.markdown("### :material/book:") 
+    st.markdown("#### :material/book:") 
 with icon_text_2:
     if "Percentage" in user_profile["system"]:
         shadcn_text("Honours Target", variant = "heading")
@@ -105,7 +108,6 @@ with icon_text_2:
 result = calculate_target_score(selected_semester)
 
 with st.container():
-
         if result["status"] == "Impossible":
             alert_prefix = "X"
             metric_title = "Required Avg (Exceeded)"
@@ -128,7 +130,6 @@ with st.container():
             description = metric_val
         )
 
-
         st.write("")
         if result["status"] == "Impossible":
             st.error(result["message"])
@@ -139,7 +140,6 @@ with st.container():
             st.info(result["message"])
         else:
             st.success(result["message"])
-
 
 if result["status"] in ["On Track", "Safe Scope"]:
     req_mark = min(max(float(result["required_mark"]), 0.0), 100.0)
@@ -155,4 +155,3 @@ if result["status"] in ["On Track", "Safe Scope"]:
         label_visibility = "collapsed",
         help = "This bar is to highlight where your required performance sits."
     )
-#endregion

@@ -1,5 +1,3 @@
-# to handle user input of modules and assessments through streamlit forms
-
 import streamlit as st
 import pandas as pd
 from database import (
@@ -9,22 +7,31 @@ from database import (
     get_user_settings
 )
 import streamlit_shadcn_ui as ui
-from helper_functions import shadcn_text
+from helper_functions import shadcn_text, set_page
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 1. PAGE SETUP
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+st.set_page_config(page_title = "Module and Assessment Registration", layout = "wide")
+set_page("Module and Assessment Registration", "Register your modules and assessments here to populate your weekly metrics and grade pages.")
+
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 2. LOAD SETTINGS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user_profile = get_user_settings()
+df_modules = get_modules_dataframe()
+df_assessments = get_assessments_dataframe()
+table_setup()
 
-# session state flags for dialog windows
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 3. SESSION STATE FLAGS FOR DIALOG WINDOWS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 if "trigger_edit" not in st.session_state:
     st.session_state.trigger_edit = False
 if "code_to_edit" not in st.session_state:
     st.session_state.code_to_edit = ""
 
 
-# PAGE CONFIGURATION
-st.set_page_config(page_title = "Module and Assessment Registration", layout = "wide")
-table_setup()
-
-# SESSION STATE FLAGS FOR DIALOG WINDOWS
 if "trigger_edit_module" not in st.session_state:
     st.session_state.trigger_edit_module = False
 if "trigger_edit_assessment" not in st.session_state:
@@ -35,13 +42,9 @@ if "code_to_edit" not in st.session_state:
 if "assessment_id_to_edit" not in st.session_state:
     st.session_state.assessment_id_to_edit = ""
 
-# GET DATAFRAMES TO BE USED THROUGHOUT
-df_modules = get_modules_dataframe()
-df_assessments = get_assessments_dataframe()
-
-
-
-# DIALOG WINDOWS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 4. DIALOG WINDOWS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 @st.dialog("Confirm Assessment Details")
 def confirm_assessment_submission(module_code, title, percentage, must_pass, weeks_list, is_final_exam, component_scale = None):
     st.warning("Please review assessment information carefully before submitting.")
@@ -140,9 +143,11 @@ def edit_assessment_submission(assessment_id):
             else:
                 st.error("Please fill in all fields.")
 
-    
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 5. MODULE SECTION
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  
 def render_module_section():
-    shadcn_text("Module Management", variant = "title", color = "navy")
+    shadcn_text("Modules", variant = "title", color = "navy")
 
     # row into two columns, one for database view of all modules, one for module submission
     col_table, col_form = st.columns([8, 5])
@@ -207,11 +212,12 @@ def render_module_section():
                             st.error("Error saving.")
                     else:
                         st.serror("Please fill in all required fields.")
-                
 
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 6. ASSESSMENT SECTION
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def render_assessment_section():
-    shadcn_text("Assessment Management", variant = "title", color = "navy")
+    shadcn_text("Assessments", variant = "title", color = "navy")
     
     col_table, col_form = st.columns([8, 5])
     
@@ -324,13 +330,13 @@ def render_assessment_section():
                     else:
                         st.error("Please fill in all fields.")
 
-# =============================================================================
-# EXECUTABLE LAYOUT SEQUENCE RUNNERS
-# =============================================================================
-render_module_section()
-st.write("___________")
-render_assessment_section()
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 7. RUN FUNCTIONS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+render_module_section()
+st.write("____")
+render_assessment_section()
 
 if st.session_state.get("trigger_edit_module", False):
     edit_module_submission(st.session_state.code_to_edit)

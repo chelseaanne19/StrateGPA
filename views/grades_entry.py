@@ -7,19 +7,25 @@ from database import (
     get_assessments_from
 )
 import streamlit_shadcn_ui as ui
-from helper_functions import shadcn_text
+from helper_functions import shadcn_text, set_page
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 1. PAGE SETUP
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 st.set_page_config(page_title = "StrateGPA: Log Grades", layout = "wide")
+set_page("Log Achieved Grades", "Update your results here as soon as you receive them to keep your target GPA / Honours predictions accurate.")
 
-shadcn_text("Log Achieved Grades", variant = "title", color = "navy")
-shadcn_text("Update your results here as soon as you receive them to keep your target GPA predictions accurate.", variant = "subheading", color = "grey")
-st.write("____")
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 2. LOAD SETTINGS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user_profile = get_user_settings()
+df_modules = get_modules_dataframe()
 selected_semester = ui.select("Select Semester:", options = ["Autumn", "Spring"])
 ui.separator()
 
-df_modules = get_modules_dataframe()
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 3. LOAD MODULES AND THEIR RESPECTIVE ASSESSMENTS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 if df_modules.empty:
     st.info("No courses registered yet. Please navigate to **Module and Assessment Registration** to add modules and assessments")
 else:

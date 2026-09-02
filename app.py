@@ -4,6 +4,9 @@ import streamlit_shadcn_ui as ui
 from streamlit_extras.steps import *
 from helper_functions import shadcn_text
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 1. WELCOME POP UP WINDOW
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 if "show_welcome" not in st.session_state:
     st.session_state.show_welcome = False
 
@@ -40,12 +43,15 @@ def welcome_message():
     if ui.button("Continue!"):
         st.rerun()
 
-
-
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 2. LOAD SETTINGS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 table_setup()
 user_profile = get_user_settings()
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 3. USER CONFIGURES SETTINGS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 if user_profile is None:
     st.set_page_config(page_title = "Welcome to StrateGPA", layout = "centered")
     st.markdown("# :material/school: StrateGPA")
@@ -156,22 +162,23 @@ if user_profile is None:
 
     st.write("____")
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 4. LOAD APP [SETTINGS HAVE ALREADY BEEN CONFIGURED]
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 else:
-
     if st.session_state.get("show_welcome", True):
         st.session_state.welcome_message = False
         welcome_message()
     
-
     config_page = st.Page("views/configurations.py", title = "Module and Assessment Registration", icon = ":material/add:")
     grades_page = st.Page("views/grades_entry.py", title = "Grade Entry", icon = ":material/add:")
-    dashboard_page = st.Page("views/dashboard.py", title = "Weekly Workload", icon = ":material/event:")
-    gpa_page = st.Page("views/gpa.py", title = "Academic Performance", icon = ":material/add_task:")
+    weekly_workload_page = st.Page("views/weekly_workload.py", title = "Weekly Workload", icon = ":material/event:")
+    academic_performance = st.Page("views/academic_performance.py", title = "Academic Performance", icon = ":material/add_task:")
     help_page = st.Page("views/help_guide.py", title = "Help Guide", icon = ":material/help:")
     feedback_page = st.Page("views/feedback.py", title = "Feedback", icon = ":material/rate_review:")
     pg = st.navigation(
         {
-            f"🏫 {user_profile['institution']}": [dashboard_page, gpa_page],
+            f"🏫 {user_profile['institution']}": [weekly_workload_page, academic_performance],
                   "System Management": [config_page, grades_page, help_page, feedback_page]
         }
     )

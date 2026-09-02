@@ -9,63 +9,57 @@ from database import (
 import plotly.express as px
 from gpa_calc import calculate_semester_gpa
 import streamlit_shadcn_ui as ui
-from helper_functions import shadcn_text
+from helper_functions import shadcn_text, set_page
 
 
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 1. PAGE SETUP
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 st.set_page_config(page_title = "Weekly Workload", layout = "wide")
+set_page("Weekly Workload", "Track upcoming busy weeks and plan accordingly")
 
-shadcn_text("Weekly Workload", variant = "title")
-shadcn_text("Track upcoming busy weeks and plan accordingly.", variant = "subheading", color = "grey")
-st.write("____")
-
-
-#region Sidebar
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 2. LOAD SETTINGS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# WEEK AND SEMESTER FILTERS
 if "current_week" not in st.session_state:
     st.session_state.current_week = 1
 
 with st.sidebar:
     shadcn_text("Timeline", variant = "heading")
+    ui.separator()
     st.session_state.current_week = ui.select(
-        "Set Current Academic Week:",
-        list(range(1, 18))
-    )
+            "Current Academic Week",
+            list(range(1, 18))
+        )
+
+    selected_semester = ui.select("Semester", options = ["Autumn", "Spring"])
+    ui.separator()
 
 active_week = st.session_state.current_week
-#endregion
 
-# filters
-col_trim, col_mod = st.columns([1, 1])
-
-with col_trim:
-    selected_trimester = ui.select("Trimester:", options = ["Autumn", "Spring"])
-
-
-# get all modules
 df_modules = get_modules_dataframe()
 if not df_modules.empty:
-    trimester_modules = df_modules[df_modules["Trimester"] == selected_trimester]["Module Code"].tolist()
+    semester_modules = df_modules[df_modules["Trimester"] == selected_semester]["Module Code"].tolist()
 else:
-    trimester_modules = []
+    semester_modules = []
 
-# filtering options
-filter_options = ["All Modules"] + trimester_modules
 
-with col_mod:
-    selected_module = ui.select("Module:", options = filter_options)
-
+# MODULE FILTERS
+filter_options = ["All Modules"] + semester_modules
+selected_module = ui.select("Module:", options = filter_options)
 mod_query_params = None if selected_module == "All Modules" else selected_module
 
 ui.separator()
 
 
-####################
-# CARDS
-####################
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 3. GRADE PROGRESS CARDS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 shadcn_text("Grade Progress", variant = "heading")
-progress = get_grade_progress(selected_trimester, module_code = mod_query_params)
+progress = get_grade_progress(selected_semester, module_code = mod_query_params)
 
-chart_df = get_weekly_workload(selected_trimester, module_code = mod_query_params)
+chart_df = get_weekly_workload(selected_semester, module_code = mod_query_params)
 full_timeline_df = pd.DataFrame({"Week" : list(range(1, 18))})
 chart_df = pd.merge(full_timeline_df, chart_df, on = "Week", how = "left").fillna(0)
 
@@ -88,12 +82,15 @@ with cols[2]:
 st.write("_____")
 
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 4. WORKLOAD BAR CHART / HEATMAP
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 shadcn_text("Workload Heatmap", variant = "heading")
 shadcn_text(f"{selected_module}", variant = "subheading")
 
 user_profile = get_user_settings()
 
-if selected_trimester == "Autumn":
+if selected_semester == "Autumn":
     max_teaching_weeks = user_profile["teaching_weeks_autumn"] if user_profile else 12
 else:
     max_teaching_weeks = user_profile["teaching_weeks_spring"] if user_profile else 14
@@ -174,16 +171,16 @@ else:
 st.write("____")
 
 
-#################
-# WEEKLY AGENDA
-#################
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 5. WEEKLY AGENDA
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 shadcn_text("Agenda", variant = "heading")
 shadcn_text(f"Week {active_week}", variant = "subheading")
 
 selected_tab = ui.tabs(options = ["Important Modules", "Week Tasks"], key = "selected_agenda_tab")
 
 if selected_tab == "Important Modules":
-    df_contributors = get_week_contributors(selected_trimester, active_week)
+    df_contributors = get_week_contributors(selected_semester, active_week)
     if df_contributors.empty:
         st.info(f"Week {active_week} is clear!")
     else:
@@ -193,7 +190,7 @@ if selected_tab == "Important Modules":
             st.write("____")
 
 if selected_tab == "Week Tasks":
-    df_agenda = get_week_agenda(selected_trimester, active_week)
+    df_agenda = get_week_agenda(selected_semester, active_week)
     if df_agenda.empty:
         st.info(f"Week {active_week} is clear!")
     else:

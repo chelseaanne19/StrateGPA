@@ -1,15 +1,12 @@
-'''
-functions involving SQL
-'''
-
 import sqlite3
 import pandas as pd
 
+# DATABASE FILE NAME
 DB_NAME = "modules_and_assessments.db"
 
-# ___________________
-# TABLES
-# ___________________
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# SQL TABLES
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def table_setup():
     # opening connection context manager
     with sqlite3.connect(DB_NAME) as conn:
@@ -56,9 +53,9 @@ def table_setup():
         conn.commit()
 
 
-# _________________
-# SETTINGS / CONFIGURATIONS
-# _________________
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# USER CONFIGURATIONS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def get_user_settings():
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
@@ -120,75 +117,10 @@ def clear_user_settings():
     except sqlite3.IntegrityError:
         return False
 
-# TO INITIALISE TABLES (testing with hardcoded data (list) before user input is involved)
-def seed_database(MODULES):
-    # opening connection context manager
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
 
-        # querying if data exists in any table
-        cur.execute('''
-                    SELECT
-                        (SELECT COUNT(*)
-                        FROM modules) +
-                        (SELECT COUNT(*)
-                        FROM assessments) +
-                        (SELECT COUNT(*)
-                        FROM assessment_weeks)
-                    ''')
-
-        if cur.fetchone()[0] == 0:
-            for module in MODULES:
-                cur.execute('''
-                            INSERT INTO modules
-                            (module_code, module_title, trimester)
-                            VALUES
-                            (?, ?, ?)
-                            ''',
-                            (
-                                module["Code"],
-                                module["Title"],
-                                module["Trimester"]
-                            )
-                            )
-
-                for assessment in module["Assessments"]:
-                    cur.execute('''
-                                INSERT INTO assessments
-                                (module_code, assessment_title, assessment_percentage, must_pass_component)
-                                VALUES
-                                (?, ?, ?, ?)
-                                ''',
-                                (
-                                    module["Code"],
-                                    assessment["Description"],
-                                    assessment["Grade Percentage"],
-                                    assessment["Must Pass Component"]
-                                )
-                                )
-
-                    # variable needed for weeks table (need corresponding assessment with week numbers)
-                    assessment_id = cur.lastrowid
-
-                    for week in assessment["Weeks"]:
-                        cur.execute('''
-                                    INSERT INTO assessment_weeks
-                                    (assessment_id, week)
-                                    VALUES
-                                    (?, ?)
-                                    ''',
-                                    (
-                                        assessment_id, week
-                                    )
-                                    )
-
-    conn.commit()
-
-
-# __________________
-# DATA / DATAFRAME FETCHING
-# __________________
-# FETCHES ALL MODULES AS A DATAFRAME
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# DATAFRAMES
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def get_modules_dataframe():
     # opening connection context manager
     with sqlite3.connect(DB_NAME) as conn:
@@ -204,7 +136,6 @@ def get_modules_dataframe():
 
     return df
 
-# FETCHES ALL ASSESSMENTS AS A DATAFRAME
 def get_assessments_dataframe():
     with sqlite3.connect(DB_NAME) as conn:
         query = '''
@@ -229,7 +160,6 @@ def get_assessments_dataframe():
 
     return df
 
-# FETCHES ASSESSMENTS OF A CERTAIN MODULE
 def get_assessments_from(module_code):
     with sqlite3.connect(DB_NAME) as conn:
         query = '''
@@ -247,7 +177,10 @@ def get_assessments_from(module_code):
         df = pd.read_sql_query(query, conn, params = (module_code,))
     return df
 
-# INSERT MODULE
+
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# INSERTS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def insert_module(code_input, title_input, trimester_input):
     try:
         with sqlite3.connect(DB_NAME) as conn:
@@ -271,7 +204,6 @@ def insert_module(code_input, title_input, trimester_input):
     except sqlite3.IntegrityError:
         return False
 
-# INSERT ASESSMENT
 def insert_assessment(module_code, title, percentage, must_pass, weeks_list, is_final_exam, component_scale = None):
     try:
         with sqlite3.connect(DB_NAME) as conn:
@@ -322,7 +254,9 @@ def insert_assessment(module_code, title, percentage, must_pass, weeks_list, is_
 
 
 
-# UPDATE MODULE
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# UPDATES
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def update_module(old_code, new_code, new_title, new_trimester):
     try:
         with sqlite3.connect(DB_NAME) as conn:
@@ -351,7 +285,6 @@ def update_module(old_code, new_code, new_title, new_trimester):
     except sqlite3.IntegrityError:
         return False
 
-# UPDATE ASSESSMENT
 def update_assessment(assessment_id, new_module_code, new_title, new_percentage, new_must_pass, new_week, component_scale = None):
     try:
         with sqlite3.connect(DB_NAME) as conn:
@@ -385,7 +318,6 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
     except sqlite3.IntegrityError:
         return False
 
-# SUBMIT GRADES
 def update_assessment_grade(assessment_id, grade):
     try:
         with sqlite3.connect(DB_NAME) as conn:
@@ -407,8 +339,9 @@ def update_assessment_grade(assessment_id, grade):
         return False
 
 
-
-# DELETE MODULE
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# DELETES
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def delete_module(code_selected):
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
@@ -426,7 +359,6 @@ def delete_module(code_selected):
 
         conn.commit()
 
-# DELETE ASSESSMENT
 def delete_assessment(assessment_id):
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
@@ -446,9 +378,9 @@ def delete_assessment(assessment_id):
 
 
 
-# _________________________
-# WEEKLY WORKLOAD FUNCTIONS
-# _________________________
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# FUNCTIONS FOR WEEKLY WORKLOAD PAGE [RETURNS DFS / DICTIONARIES]
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 # gets workload grouped by week, always filtered by trimester, and module if selected
 def get_weekly_workload(trimester, module_code = None):
@@ -533,6 +465,7 @@ def get_grade_progress(trimester, module_code = None):
         "upcoming_weight": upcoming_weight
     }
 
+# Gets assessments due for the week
 def get_week_agenda(trimester, target_week):
     with sqlite3.connect(DB_NAME) as conn:
         query = '''

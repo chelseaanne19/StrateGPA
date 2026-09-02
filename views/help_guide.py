@@ -3,12 +3,21 @@ from database import get_user_settings, clear_user_settings
 import streamlit_shadcn_ui as ui
 from helper_functions import shadcn_text
 
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 1. PAGE SETUP
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 st.set_page_config(page_title = "StrateGPA: Instruction Manual", layout = "wide")
 shadcn_text("Instruction Manual", variant = "title", color = "navy")
 
-
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 2. LOAD SETTINGS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user_profile = get_user_settings()
 system = user_profile["system"]
+
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# 3. INFORMATION GUIDE TABS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 selected_tab = ui.tabs(
     options=[
     "1. Initial Calibration",
@@ -19,6 +28,7 @@ selected_tab = ui.tabs(
     key="grading_workflow_tabs"
 )
 
+# 1. Initial Calibration
 if selected_tab == "1. Initial Calibration":
     shadcn_text("Understanding System Calibration", variant = "heading", color = "navy")
     shadcn_text("Before data entry begins, StrateGPA bases its calculations on your university's rules", variant = "subheading", color = "grey")
@@ -62,8 +72,7 @@ if selected_tab == "1. Initial Calibration":
             else:
                 st.error("Error clearing settings.")
 
-
-
+# 2. Syllabus Configurations
 if selected_tab == "2. Syllabus Configurations":
     shadcn_text("Structuring Your Courses & Assessments", variant = "heading", color = "navy")
     shadcn_text("To populate pages like Weekly Workload and Academic Performance, first navigate to Module and Assessment Registrations.", variant = "subheading", color = "grey")
@@ -94,6 +103,7 @@ if selected_tab == "2. Syllabus Configurations":
             Brightspace curriculum handouts to select the correct sub-scale dropdown option (*Standard, Alt Linear 40, Alt Non-Linear 50, Alt Linear 60*)!\n
         ''')
 
+# 3. Logging Results
 if selected_tab == "3. Logging Results":
     shadcn_text("Managing your results", variant = "heading", color = "navy")
     shadcn_text("Once you receive your grades, please input them on the Grade Entry page under System Management.", variant = "subheading", color = "grey")
@@ -116,7 +126,7 @@ if selected_tab == "3. Logging Results":
                     description = "If a grade gets released with a clerical error or an entry gets logged into the wrong row, simply click **'Clear'** to shift that item's status back to pending."
     )
 
-
+# 4. Interpreting GPA Metrics
 if selected_tab == "4. Interpreting GPA Metrics":
     shadcn_text("Understanding StrateGPA", variant = "heading", color = "navy")
     st.write("____")

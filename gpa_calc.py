@@ -306,7 +306,6 @@ def calculate_semester_gpa(trimester):
         "modules_graded" : modules_with_grades
         }
 
-
 def calculate_target_score(trimester):
     user_profile = get_user_settings()
     if not user_profile:
