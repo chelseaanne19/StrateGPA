@@ -142,7 +142,25 @@ def render_signup_tab():
                 st.error(f"Sign up failed: {e}")
         else:
             st.error("Please specify an email and secure password matrix.")
+@st.fragment
+def render_forgot_password():
+    shadcn_text("Password Recovery")
+    shadcn_text("Enter your registered email address below, and we will send out a secure recovery link for you to regain access.", variant = "subheading", color = "grey")
+    ui.separator()
 
+    recovery_email = ui.input("Registered Email Address", key = "recovery_input_email")
+    if ui.button("Send Recovery Link", key = "recovery_submit_btn"):
+        if recovery_email.strip():
+            try:
+                supabase.auth.reset_password_for_email(
+                    email = recovery_email.strip()
+                )
+                st.success("Recovery email dispatched! Please check your inbox and click the verification link to log back in.")
+            except Exception as e:
+                st.error(f"{e}")
+        else:
+            st.error("Please specify a valid email address.")
+    st.stop()
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # SESSION STATE
