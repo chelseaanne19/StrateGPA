@@ -13,7 +13,6 @@ __pycache__/
 *.db-journal
 *.sqlite
 # Streamlit Local Configurations
-.streamlit/config.toml
 .streamlit/secrets.toml
 .claude/
 .agents/
