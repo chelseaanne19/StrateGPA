@@ -2,7 +2,19 @@ import streamlit as st
 from database import get_user_settings, clear_user_settings, get_current_user_id
 import streamlit_shadcn_ui as ui
 from helper_functions import shadcn_text
+from streamlit_extras.scroll_to_element import *
 
+@st.fragment
+def render_help_tabs():
+    items = [
+            ui.AccordionItem("sem_lengths", "Why Semester Lengths Matter", "Setting your accurate teaching weeks is useful when inputting final exam assessments and you don't know which exact week the exam is on, and for the weekly workload toggle."),
+            ui.AccordionItem("adjust", "How to Adjust", "If you misconfigured these options during setup, you can re-enter the settings below."),
+            ]
+    open_section = ui.accordion(items)
+
+@st.fragment
+def scroll(string):
+    ui.button(f"{string}", key = "nav_initial")
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 1. PAGE SETUP
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
@@ -14,6 +26,11 @@ shadcn_text("Instruction Manual", variant = "title", color = "navy")
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user_profile = get_user_settings()
 system = user_profile["grading_system"]
+
+import streamlit as st
+from database import get_user_settings, clear_user_settings, get_current_user_id
+import streamlit_shadcn_ui as ui
+from helper_functions import shadcn_text
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 3. INFORMATION GUIDE TABS
@@ -58,11 +75,7 @@ if selected_tab == "1. Initial Calibration":
                 description = f"{user_profile["weeks_spring"]}",
                 )
     with columns[1]:
-        items = [
-                ui.AccordionItem("sem_lengths", "Why Semester Lengths Matter", "Setting your accurate teaching weeks is useful when inputting final exam assessments and you don't know which exact week the exam is on, and for the weekly workload toggle."),
-                ui.AccordionItem("adjust", "How to Adjust", "If you misconfigured these options during setup, you can re-enter the settings below."),
-                ]
-        open_section = ui.accordion(items)
+        render_help_tabs()
 
         if ui.button("Re-enter university name, grading scale system, and semester teaching weeks"):
             success = clear_user_settings()
@@ -125,7 +138,7 @@ if selected_tab == "3. Logging Results":
                     )
     ui.card(
                     title = "Corrections",
-                    description = "If a grade gets released with a clerical error or an entry gets logged into the wrong row, simply click **'Clear'** to shift that item's status back to pending."
+                    description = "If a grade gets released with a clerical error or an entry gets logged into the wrong row, simply click 'Clear' to shift that item's status back to pending."
     )
 
 # 4. Interpreting GPA Metrics

@@ -186,8 +186,8 @@ def insert_module(code_input, title_input, semester):
     current_uid = get_current_user_id()
     payload = {
         "user_id" : current_uid,
-        "module_code" : code_input.strip(),
-        "module_title" : title_input.strip().upper(),
+        "module_code" : code_input.strip().upper(),
+        "module_title" : title_input.strip(),
         "semester" : semester
     }
     try:
