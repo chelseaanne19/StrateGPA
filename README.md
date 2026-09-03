@@ -1,12 +1,14 @@
 # StrateGPA
-The application is live @:
+The application is live @
 **[https://strategpa.streamlit.app/](https://strategpa.streamlit.app/)**
-[APP IS LIVE @ (https://strategpa.streamlit.app/)]
 ___
 
 **StrateGPA** is a multi-user web app I have built for college students who find themselves overwhelmed by continuous assessments, losing track of deadlines, and having zero time management.
 
-Traditional calendars are undoubtedly useful. They show you *when* assessments might be due, but they don't show you the 30 hours of work hitting you that Monday. StrateGPA turns a messy syllabus into a visual workload chart, handles all the GPA translation math, and calculates exactly what assessment scores you need in order to achieve your target grades for the semester.
+Traditional calendars are undoubtedly useful.
+They show you *when* assessments might be due, but they don't show you the 30 hours of work hitting you that Monday.
+
+StrateGPA turns a messy syllabus into a visual workload chart, handles all the GPA translation math, and calculates exactly what assessment scores you need in order to achieve your target grades for the semester.
 
 ___
 
@@ -46,7 +48,3 @@ While building this, I ran into a few tricky software problems that I had to res
 * `views/` - The frontend pages (Weekly Workload, Academic Performance, Grade Entry, Module and Assessments Registration, Help Guide, Feedback).
 * `requirements.txt` - Tells the cloud server exactly which libraries to install.
 * `.streamlit/config.toml` - My custom colour codes.
-
----
-
-testing this page
