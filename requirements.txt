@@ -4,3 +4,4 @@ supabase
 plotly
 altair
 streamlit-shadcn-ui
+streamlit-extras
