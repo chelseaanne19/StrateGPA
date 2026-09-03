@@ -1,4 +1,3 @@
-import sqlite3
 import pandas as pd
 from database import get_user_settings, get_current_user_id
 from database import supabase

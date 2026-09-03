@@ -1,0 +1,6 @@
+streamlit
+pandas
+supabase
+plotly
+altair
+streamlit-shadcn-ui
