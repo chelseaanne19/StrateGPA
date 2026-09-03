@@ -91,8 +91,9 @@ def welcome_message():
 @st.fragment
 def render_login_tab():
     email = ui.input("Email", key = "login_email")
-    password = ui.input("Password", type = "password", key = "login_pass")
-            
+    show_password = ui.toggle("Show Password", key = "show_login_pass", icon = "italic")
+    password = ui.input("Password", type = "text" if show_password else "password", key = "login_pass")
+    
     if ui.button("Sign In", key = "signin_submit_btn"):
         if email and password:
             try:
@@ -116,7 +117,8 @@ def render_login_tab():
 @st.fragment
 def render_signup_tab():
     new_email = ui.input("Email", key = "reg_email")
-    new_password = ui.input("Password", type = "password", key = "reg_pass")
+    show_password = ui.toggle("Show Password", key = "show_login_pass", icon = "italic")
+    new_password = ui.input("Password", type = "text" if show_password else "password", key = "reg_pass")
             
     if ui.button("Create Account", key = "signup_submit_btn"):
         if new_email and new_password:
