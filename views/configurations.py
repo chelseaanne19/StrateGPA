@@ -93,6 +93,7 @@ def edit_module_submission(orig_module_code):
 
                 if success:
                     st.session_state.trigger_edit_module = False
+                    st.cache_data.clear()
                     st.rerun()
                 else:
                     st.error("A module with this **code** or **title** *already exists* in your database.")
@@ -110,14 +111,16 @@ def edit_assessment_submission(assessment_id):
     orig_code = resulting_row["Module Code"].values[0]
     orig_percentage = int(resulting_row["Weight %"].values[0])
     orig_week = int(resulting_row["Week Due"].values[0])
-    orig_component_scale = resulting_row["Component Scale"].values[0]
+    if "UCD" in user_profile["grading_system"]:
+        orig_component_scale = resulting_row["Component Scale"].values[0]
     orig_must_pass = resulting_row["Must Pass"].values[0]
     bool_must_pass = True if orig_must_pass == "Yes" else False
 
     module_list = df_modules["Module Code"].tolist() if not df_modules.empty else [orig_code]
     code_index = module_list.index(orig_code) if orig_code in module_list else 0
     scale_list = ["Standard 40% Pass", "Alternative Linear 40% Pass", "Alternative Non-Linear 50% Pass", "Alternative 60% Pass"]
-    scale_index = scale_list.index(orig_component_scale) if orig_component_scale in scale_list else 0
+    if "UCD" in user_profile["grading_system"]:
+        scale_index = scale_list.index(orig_component_scale) if orig_component_scale in scale_list else 0
 
     with st.form("edit_assessment_form"):
         new_title = ui.input("Enter new assessment title:", value = orig_title, key = "new_ass_title")
@@ -145,6 +148,7 @@ def edit_assessment_submission(assessment_id):
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 5. MODULE SECTION
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  
+@st.fragment
 def render_module_section():
     shadcn_text("Modules", variant = "title", color = "navy")
 
@@ -192,7 +196,7 @@ def render_module_section():
                 semester = ui.select("Choose Semester", options = ["Autumn", "Spring"])
 
            
-                trigger_btn = ui.button("Register Module")
+                trigger_btn = st.button("Register Module")
                 decision = ui.alert_dialog(
                             show = trigger_btn,
                             title = "Confirm Module Details",
@@ -210,11 +214,12 @@ def render_module_section():
                         else:
                             st.error("Error saving.")
                     else:
-                        st.serror("Please fill in all required fields.")
+                        st.error("Please fill in all required fields.")
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 6. ASSESSMENT SECTION
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+@st.fragment
 def render_assessment_section():
     shadcn_text("Assessments", variant = "title", color = "navy")
     
@@ -223,7 +228,7 @@ def render_assessment_section():
     with col_table:
         with st.container(border = True):
             shadcn_text("Current Created Assessments", variant = "heading", color = "navy")
-            if df_assessments.empty:
+            if df_assessments is None or df_assessments.empty:
                 st.info("No assessments created yet.")
             else:
                 st.dataframe(df_assessments, use_container_width = True, hide_index = True, height = 380)
@@ -272,7 +277,7 @@ def render_assessment_section():
                     exam_weeks_str = "13, 14"
 
                 # toggle to indicate info statements for form
-                is_final_exam = ui.switch("Assessment is an end of semester final exam", value = False)
+                is_final_exam = st.toggle("Assessment is an end of semester final exam", value = False)
 
 
             # form submission
@@ -316,7 +321,7 @@ def render_assessment_section():
                         if user_profile and "UCD" in user_profile["grading_system"]:
                             st.write("UCD Mark To Grade Component Scales")
 
-                            selected_scale = ui.select(
+                            selected_scale = st.selectbox(
                             "Select component scale associated for this assessment",
                             options = ["Standard 40% Pass", "Alternative linear 40% Pass", "Alternative Non-Linear 40% Pass", "Alternative Linear 60% Pass"],
                             help = "If unsure, visit the module's website -> 'How will I be assessed' -> 'Assessment Strategy' -> 'Component Scale'")

@@ -97,12 +97,45 @@ else:
 
 show_exams = st.toggle(f"Include End-of-Semester Assessments (Weeks {max_teaching_weeks + 1}+)", value = True, help = "Toggle off to better view your semester workload before exams.")
 
-if chart_df["Total Workload (%)"].sum() == 0:
+
+raw_chart_df = get_weekly_workload(selected_semester)
+
+
+if show_exams:
+    total_weeks_limit = max_teaching_weeks + 3
+else:
+    total_weeks_limit = max_teaching_weeks
+base_timeline_df = pd.DataFrame({"Week": list(range(1, total_weeks_limit + 1))})
+
+
+base_timeline_df["Week"] = base_timeline_df["Week"].astype(int)
+
+if raw_chart_df.empty:
+
+    display_chart_df = base_timeline_df.copy()
+    display_chart_df["Total Workload (%)"] = 0.0
+    display_chart_df["Module"] = "No Tasks Due"
+else:
+
+    raw_chart_df["Week"] = pd.to_numeric(raw_chart_df["Week"], errors='coerce').fillna(0).astype(int)
+    raw_chart_df["Total Workload (%)"] = pd.to_numeric(raw_chart_df["Total Workload (%)"], errors='coerce').fillna(0.0).astype(float)
+    raw_chart_df["Module"] = raw_chart_df["Module"].astype(str)
+    
+
+    display_chart_df = pd.merge(base_timeline_df, raw_chart_df, on="Week", how="left")
+    
+
+    display_chart_df["Total Workload (%)"] = display_chart_df["Total Workload (%)"].fillna(0.0)
+    display_chart_df["Module"] = display_chart_df["Module"].fillna("No Tasks Due")
+
+
+
+if display_chart_df["Total Workload (%)"].sum() == 0 and raw_chart_df.empty:
     st.info("No active assessments located for this dashboard filter.")
 else:
     if show_exams:
         fig = px.bar(
-        chart_df,
+        display_chart_df,
         x = "Week",
         y = "Total Workload (%)",
         color = "Total Workload (%)",
@@ -136,7 +169,7 @@ else:
         st.plotly_chart(fig, use_container_width = True, config = chart_config)
     else:
         fig = px.bar(
-                chart_df[chart_df["Week"] <= max_teaching_weeks],
+                display_chart_df[display_chart_df["Week"] <= max_teaching_weeks],
                 x = "Week",
                 y = "Total Workload (%)",
                 color = "Total Workload (%)",
@@ -185,8 +218,8 @@ if selected_tab == "Important Modules":
         st.info(f"Week {active_week} is clear!")
     else:
         for idx, row in df_contributors.iterrows():
-            shadcn_text(f"{row["Module Code"]} : {row["Module Title"]}", variant = "heading", color = "sky")
-            ui.progress(value = float(row["Contribution (%)"]), label = f"{float(row["Contribution (%)"]):.1f}% is due.", show_value = True)
+            shadcn_text(f"{row["Module Code"]}", variant = "heading", color = "sky")
+            ui.progress(value = float(row["Weight %"]), label = f"{float(row["Weight %"]):.1f}% is due.", show_value = True)
             st.write("____")
 
 if selected_tab == "Week Tasks":
@@ -201,19 +234,20 @@ if selected_tab == "Week Tasks":
             weight = float(row['Weight %'])
             must_pass = int(row['Must Pass'])
             current_grade = row["Received Grade"]
-            is_graded = pd.notna(current_grade)
+            is_graded = 0 if current_grade == "Pending" else 1
 
             # variable for spacing
             s = "\u00A0"
 
-            grade_status = f"Graded: {current_grade:.1f}%" if is_graded else "Grade Pending ...."
+            grade_status = f"Graded: {current_grade}" if is_graded else "Grade Pending ...."
             with st.expander(f":blue[**{title}**]{s*4}|{s*4}**{weight:.0f}%** of **{mod_code}**{s*4}|{s*4}{grade_status}"):
                 if must_pass == 1:
                     st.error("**MUST PASS THIS ASSESSMENT**")
 
                 with st.expander("Log Grade"):
                     with st.form(key = f"grade_form_{ass_id}"):
-                        default_val = float(current_grade) if is_graded else 0.0
+                        clean_grade = current_grade.strip().replace("%", "")
+                        default_val = float(clean_grade) if is_graded else 0.0
                         new_grade_score = st.number_input(
                             "Enter achieved score (0.0 -> 100.0):",
                             min_value = 0.0,

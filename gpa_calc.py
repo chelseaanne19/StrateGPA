@@ -1,7 +1,8 @@
 import sqlite3
 import pandas as pd
 from database import get_user_settings, get_current_user_id
-import supabase
+from database import supabase
+import streamlit as st
 
 def convert_ucd_mark_to_grade(percentage, scale_type = "Standard 40% Pass"):
     """
@@ -133,9 +134,6 @@ def get_us_letter_from_points(points):
     elif points >= 1.00: return "D"
     else: return "F"
 
-# -----------------------------------------------------------------------------
-# > CALCULATE MODULE LEVEL SCALE-AWARE STANDING CURRENCIES
-# -----------------------------------------------------------------------------
 def calculate_module_gpa(module_code):
     
     user_profile = get_user_settings()
@@ -155,7 +153,7 @@ def calculate_module_gpa(module_code):
         assessments_data = []
         
     if not assessments_data:
-        return {"Module Average": 0.0, "Letter_Grade": "NG", "Module GPA": 0.0, "Weight Graded": 0.0}
+        return {"Module Average": 0.0, "Letter_Grade": "NG", "Module GPA": 0.0, "Weight Graded": 0.0, "Evaluation Status" : "PENDING", "Performance Status" : "Assessments have yet to be registered."}
     
 
     df = pd.DataFrame(assessments_data)
@@ -170,10 +168,11 @@ def calculate_module_gpa(module_code):
         assessment_percentage = float(row["assessment_percentage"])
         received_grade = row["received_grade"]
 
-        component_scale = row["component_scale"]
+        if "UCD" in system:
+            component_scale = row["component_scale"]
         
 
-        if received_grade is not None:
+        if pd.notna(received_grade) and received_grade != "":
             received_grade = float(received_grade)
             percentage_of_module = received_grade * (assessment_percentage / 100.0)
             earned_assessment_percentage += percentage_of_module
@@ -181,14 +180,14 @@ def calculate_module_gpa(module_code):
         
           
             if "UCD" in system:
-                _, assessment_gpa_points = convert_ucd_mark_to_grade(received_grade, scale_type=component_scale)
+                _, assessment_gpa_points = convert_ucd_mark_to_grade(received_grade, scale_type = component_scale)
                 module_gpa_points += assessment_gpa_points * assessment_percentage
             elif "US" in system:
                 _, assessment_gpa_points = convert_us_mark_to_grade(received_grade)
                 module_gpa_points += assessment_gpa_points * assessment_percentage
                   
     if total_assessment_percentage == 0:
-        return {"Module Average": 0.0, "Letter_Grade": "Pending", "Module GPA": 0.0, "Weight Graded": 0.0}
+        return {"Module Average": 0.0, "Letter_Grade": "Pending", "Module GPA": 0.0, "Weight Graded": 0.0, "Evaluation Status" : "PENDING", "Performance Status" : "Assessments have yet to be registered."}
     
 
     final_running_percentage = (earned_assessment_percentage / total_assessment_percentage) * 100
@@ -199,7 +198,6 @@ def calculate_module_gpa(module_code):
         final_letter = convert_percentage_to_class(final_running_percentage)
     else:
         final_module_gpa = module_gpa_points / total_assessment_percentage
-        
         if "UCD" in system:
             final_letter = get_ucd_letter_from_points(final_module_gpa)
         else:
@@ -212,14 +210,12 @@ def calculate_module_gpa(module_code):
         "Module GPA": round(final_module_gpa, 2),
         "Weight Graded": total_assessment_percentage,
         
-        "Evaluation Status": "Fully Assessed" if total_assessment_percentage >= 100 else "Some graded assessments have yet to be registered.",
-        "Performance Status": "Finalised Grade" if total_assessment_percentage >= 100 else "Provisional Grade, subject to improvement."
+        "Evaluation Status": "FINALISED GRADE" if total_assessment_percentage >= 100 else "PROVISIONAL GRADE",
+        "Performance Status": "Module fully assessed." if total_assessment_percentage >= 100 else "SUBJECT TO IMPROVEMENT: Some assessments have yet to be graded."
     }
 
 
-
-def calculate_semester_gpa(trimester):
-
+def calculate_semester_gpa(semester):
     user_profile = get_user_settings()
     if not user_profile:
         return {
@@ -234,12 +230,11 @@ def calculate_semester_gpa(trimester):
     current_uid = get_current_user_id()
 
     try:
-
-        response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("trimester", trimester).execute()
-        rows = response.data if response.data else []
-    except Exception:
+        response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        rows = response.data if response else []
+    except Exception as e:
+        st.write(f"{e}")
         rows = []
-
     if not rows:
         return {
             "overall_score": 0.0,
@@ -256,9 +251,8 @@ def calculate_semester_gpa(trimester):
 
     for row in rows:
         mod_code = row["module_code"]
-
         scores = calculate_module_gpa(mod_code)
-        
+
 
         if scores["Letter_Grade"] != "NG" and scores["Letter_Grade"] != "Pending":
             modules_with_grades += 1
@@ -305,8 +299,7 @@ def calculate_semester_gpa(trimester):
         "modules_graded": modules_with_grades
     }
 
-
-def calculate_target_score(trimester):
+def calculate_target_score(semester):
 
     user_profile = get_user_settings()
     if not user_profile:
@@ -322,7 +315,7 @@ def calculate_target_score(trimester):
 
     try:
 
-        response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("trimester", trimester).execute()
+        response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
         module_rows = response.data if response.data else []
     except Exception:
         module_rows = []
@@ -359,12 +352,13 @@ def calculate_target_score(trimester):
     total_semester_syllabus_capacity = total_modules * 100 
     remaining_upcoming_marks = total_semester_syllabus_capacity - total_graded_percentage
 
+    '''
     if remaining_upcoming_marks <= 0:
         return {
             "status": "Concluded",
             "required_mark": 0.0,
             "message": "Syllabus tracking complete. All grades have been submitted."
-        }
+        } '''
 
 
     if "Percentage" in system:

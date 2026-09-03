@@ -1,5 +1,5 @@
 import streamlit as st
-from database import get_user_settings, clear_user_settings
+from database import get_user_settings, clear_user_settings, get_current_user_id
 import streamlit_shadcn_ui as ui
 from helper_functions import shadcn_text
 
@@ -71,6 +71,8 @@ if selected_tab == "1. Initial Calibration":
                 st.rerun()
             else:
                 st.error("Error clearing settings.")
+                current_uid = get_current_user_id
+                st.write(f"{current_uid}")
 
 # 2. Syllabus Configurations
 if selected_tab == "2. Syllabus Configurations":

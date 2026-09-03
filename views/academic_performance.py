@@ -71,24 +71,35 @@ else:
             stats = calculate_module_gpa(code)
             
             with st.container():
-                col_info, col_pct, col_gpa = st.columns(3)
+
+                col_info, col_pct, col_gpa, col_stats = st.columns(4)
                 
                 with col_info:
                     ui.card(
                         title = f"{code}",
-                        description = f"{title}"
+                        description = f"{title}",
+                        key = f"academic_perf_card_info{code}_{idx}"
                     )
                     
                 with col_pct:
                     ui.card(
                             title = f"Average Percentage: {stats["Module Average"]:.0f}%",
-                            description = f"Syllabus Graded: {stats["Weight Graded"]:.0f}% of module"
+                            description = f"Syllabus Graded: {stats["Weight Graded"]:.0f}% of module",
+                            key = f"academic_perf_card_pct{code}_{idx}"
                     )
                     
                 with col_gpa:
                     ui.card(
                         title = f"Letter Grade: {stats["Letter_Grade"]}",
-                        description = f"Points Awarded {stats["Module GPA"]}"
+                        description = f"Points Awarded {stats["Module GPA"]}",
+                        key = f"academic_perf_card__gpa{code}_{idx}"
+                    )
+
+                with col_stats:
+                    ui.card(
+                        title = f"{stats["Evaluation Status"]}",
+                        description = f"{stats["Performance Status"]}",
+                        key = f"academic_perf_card_stats{code}_{idx}"
                     )
 st.write("____")
 
@@ -114,7 +125,7 @@ with st.container():
             metric_val = "Impossible"
         elif result["status"] == "Secured":
             alert_prefix = "Success"
-            metric_title = "Required Avg"
+            metric_title = f"Required Avg (To reach target grade of {user_profile["target_grade"]}):"
             metric_val = "0.0%"
         elif result["status"] in ["No Modules", "Uncalibrated", "Concluded"]:
             alert_prefix = "info"

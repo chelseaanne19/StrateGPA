@@ -1,5 +1,6 @@
 import streamlit as st
 from database import get_user_settings, save_user_settings
+import pandas as pd
 import streamlit_shadcn_ui as ui
 from streamlit_extras.steps import *
 from helper_functions import shadcn_text, set_page
@@ -20,6 +21,9 @@ if "user" not in st.session_state:
 
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
+
+if "email" not in st.session_state:
+    st.session_state.email = None
 
 if "show_welcome" not in st.session_state:
     st.session_state.show_welcome = False
@@ -51,7 +55,8 @@ if st.session_state.user is None:
 
                     if response.user:
                         st.session_state.user = response.user
-                        st.session_state.user_id = response.user.id
+                        st.session_state.user_id = response.user.email
+                        st.session_state.email = response.user.email
                         st.toast("Welcome back! Synchronising your workspace...")
                         st.rerun()
                     else:
@@ -60,6 +65,7 @@ if st.session_state.user is None:
                     st.error(f"{e}")
             else:
                 st.error("Please fill out both email and password fields.")
+        st.stop()
 
     # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
     # b. SIGN UP
@@ -80,10 +86,13 @@ if st.session_state.user is None:
                     if response.user:
                         if response.session:
                             st.session_state.user = response.user
-                            st.session_state.user_id = response.user.id
+                            st.session_state.user_id = response.user.email
+                            st.session_state.email = response.user.email
 
                             st.success("Account created!")
                             st.rerun()
+                        else:
+                            st.success("Verify email.")
                 except Exception as e:
                     st.error(f"Sign up failed: {e}")
             else:
@@ -94,7 +103,7 @@ if st.session_state.user is None:
 # 4. LOAD AUTHENTICATED USER
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user = st.session_state.user
-st.session_state.user_id = user.id
+st.session_state.user_id = user.email
 user_profile = get_user_settings()
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
@@ -253,14 +262,17 @@ else:
         st.session_state.show_welcome = False
         welcome_message()
 
+    
+
     with st.sidebar:
-        shadcn_text(f"User: {user.email}", variant = "subheading", color = "grey")
+        shadcn_text(f"{user.email}", variant = "subheading", color = "grey")
         if ui.button("Log Out", key = "sidebar_logout_btn"):
             try:
                 supabase.auth.sign_out()
             finally:
                 st.session_state.user = None
                 st.session_state.user_id = None
+                st.session_state.email = None
                 st.session_state.show_welcome = False
                 st.rerun()
 
@@ -280,4 +292,3 @@ else:
     )
 
     pg.run()
-    
