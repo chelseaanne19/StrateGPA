@@ -51,7 +51,7 @@ def get_inst_name():
 def get_teaching_weeks(semester):
     s = st.number_input(f"{semester} Teaching Duration (Weeks):",
                     min_value = 1,
-                    max_value = 17,
+                    max_value = 28,
                     value = 17,
                     step = 1
             )

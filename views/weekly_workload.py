@@ -30,7 +30,7 @@ with st.sidebar:
     ui.separator()
     st.session_state.current_week = ui.select(
             "Current Academic Week",
-            list(range(1, 18))
+            list(range(1, 28))
         )
 
     selected_semester = ui.select("Semester", options = ["Autumn", "Spring"])
