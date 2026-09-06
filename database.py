@@ -292,6 +292,7 @@ def update_assessment(assessment_id, new_module_code, new_title, new_percentage,
     Updates assessment row in cloud table.
     """
     payload = {
+        "module_code" : new_module_code,
         "assessment_title" : new_title,
         "assessment_percentage" : int(new_percentage),
         "must_pass_component" : int(new_must_pass),
