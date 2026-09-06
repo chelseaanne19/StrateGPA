@@ -3,7 +3,7 @@ The application is live @
 **[https://strategpa.streamlit.app/](https://strategpa.streamlit.app/)**
 ___
 
-**StrateGPA** is a multi-user web app I have built for college students who find themselves overwhelmed by continuous assessments, losing track of deadlines, and having zero time management.
+**StrateGPA** is a student decision-support tool that turns assessment weighting, pending results, workload timing, and grade targets into actionable study priorities.
 
 Traditional calendars are undoubtedly useful.
 They show you *when* assessments might be due, but they don't show you the 30 hours of work hitting you that Monday.
@@ -29,7 +29,7 @@ ___
 
 ___
 
-## Engineering Hurdles I Handled
+## Engineering Notes
 
 While building this, I ran into a few tricky software problems that I had to research and fix:
 
