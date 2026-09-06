@@ -72,7 +72,7 @@ with cols[1]:
     total = progress["total_weight"]
     if total == 100: delta_msg = "Syllabus fully configured (100%)"
     elif total < 100: delta_msg = f"Syllabus incomplete: {total:.1f}% / 100%"
-    else: delta_msg = f"Syllabus exceeds 100% ({total:.1f}%). \n\n **Please fix assessment weightings**."
+    else: delta_msg = f"Syllabus Total: ({total:.1f}%)."
     ui.metric_card("Upcoming Marks / Grades", f"{progress['upcoming_weight']:.1f}% Available", delta = delta_msg)
 with cols[2]:
     current_week_row = chart_df[chart_df["Week"] == active_week]

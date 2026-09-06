@@ -294,8 +294,7 @@ else:
         welcome_message()
 
     with st.sidebar:
-        s = "\u00A0"
-        shadcn_text(f"{s}{user.email}", variant = "subheading", color = "grey")
+        shadcn_text(f"{user.email}", variant = "subheading", color = "grey")
         st.space("xsmall")
         if ui.button("Log Out", key = "sidebar_logout_btn"):
             try:
