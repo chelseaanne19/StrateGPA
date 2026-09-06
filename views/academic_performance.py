@@ -14,7 +14,7 @@ set_page("Academic Performance", "GPA metrics, track provisional and final grade
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 2. LOAD SETTINGS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-df_modules = get_modules_dataframe()
+df_modules = get_modules_dataframe(st.session_state.user_id)
 user_profile = get_user_settings()
 
 with st.sidebar:

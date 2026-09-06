@@ -19,7 +19,7 @@ set_page("Log Achieved Grades", "Update your results here as soon as you receive
 # 2. LOAD SETTINGS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user_profile = get_user_settings()
-df_modules = get_modules_dataframe()
+df_modules = get_modules_dataframe(st.session_state.user_id)
 selected_semester = ui.select("Select Semester:", options = ["Autumn", "Spring"])
 ui.separator()
 
@@ -38,7 +38,7 @@ else:
             title = row["Module Title"]
 
             with st.expander(f"**{code}: {title}**"):
-                df_ass = get_assessments_from(code)
+                df_ass = get_assessments_from(st.session_state.user_id, code)
 
                 if df_ass.empty:
                     st.caption("No assessments logged for this module yet.")

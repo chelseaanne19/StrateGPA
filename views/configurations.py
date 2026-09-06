@@ -19,8 +19,8 @@ set_page("Module and Assessment Registration", "Register your modules and assess
 # 2. LOAD SETTINGS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 user_profile = get_user_settings()
-df_modules = get_modules_dataframe()
-df_assessments = get_assessments_dataframe()
+df_modules = get_modules_dataframe(st.session_state.user_id)
+df_assessments = get_assessments_dataframe(st.session_state.user_id)
 
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # 3. SESSION STATE FLAGS FOR DIALOG WINDOWS

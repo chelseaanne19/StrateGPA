@@ -38,7 +38,7 @@ with st.sidebar:
 
 active_week = st.session_state.current_week
 
-df_modules = get_modules_dataframe()
+df_modules = get_modules_dataframe(st.session_state.user_id)
 if not df_modules.empty:
     semester_modules = df_modules[df_modules["Semester"] == selected_semester]["Module Code"].tolist()
 else:
@@ -57,9 +57,9 @@ ui.separator()
 # 3. GRADE PROGRESS CARDS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 shadcn_text("Grade Progress", variant = "heading")
-progress = get_grade_progress(selected_semester, module_code = mod_query_params)
+progress = get_grade_progress(st.session_state.user_id, selected_semester, module_code = mod_query_params)
 
-chart_df = get_weekly_workload(selected_semester, module_code = mod_query_params)
+chart_df = get_weekly_workload(st.session_state.user_id, selected_semester, module_code = mod_query_params)
 full_timeline_df = pd.DataFrame({"Week" : list(range(1, 18))})
 chart_df = pd.merge(full_timeline_df, chart_df, on = "Week", how = "left").fillna(0)
 
@@ -98,7 +98,7 @@ else:
 show_exams = st.toggle(f"Include End-of-Semester Assessments (Weeks {max_teaching_weeks + 1}+)", value = True, help = "Toggle off to better view your semester workload before exams.")
 
 
-raw_chart_df = get_weekly_workload(selected_semester)
+raw_chart_df = get_weekly_workload(st.session_state.user_id, selected_semester)
 
 
 if show_exams:
@@ -213,7 +213,7 @@ shadcn_text(f"Week {active_week}", variant = "subheading")
 selected_tab = ui.tabs(options = ["Important Modules", "Week Tasks"], key = "selected_agenda_tab")
 
 if selected_tab == "Important Modules":
-    df_contributors = get_week_contributors(selected_semester, active_week)
+    df_contributors = get_week_contributors(st.session_state.user_id, selected_semester, active_week)
     if df_contributors.empty:
         st.info(f"Week {active_week} is clear!")
     else:
@@ -223,7 +223,7 @@ if selected_tab == "Important Modules":
             st.write("____")
 
 if selected_tab == "Week Tasks":
-    df_agenda = get_week_agenda(selected_semester, active_week)
+    df_agenda = get_week_agenda(st.session_state.user_id, selected_semester, active_week)
     if df_agenda.empty:
         st.info(f"Week {active_week} is clear!")
     else:

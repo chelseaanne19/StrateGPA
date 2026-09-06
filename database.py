@@ -19,7 +19,7 @@ def get_current_user_id():
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 # USER CONFIGURATIONS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-@st.cache_data
+
 def get_user_settings():
     """
     Fetches user settings from the Supabase cloud table
@@ -73,14 +73,14 @@ def clear_user_settings():
 # DATAFRAMES
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 @st.cache_data
-def get_modules_dataframe():
+def get_modules_dataframe(user_id):
     """
     Gets all registered modules to return as a DataFrame
     """
 
     current_uid = get_current_user_id()
     try:
-        response = supabase.table("modules").select("*").eq("user_id", current_uid).execute()
+        response = supabase.table("modules").select("*").eq("user_id", user_id).execute()
 
         if response.data:
             df = pd.DataFrame(response.data)
@@ -95,13 +95,13 @@ def get_modules_dataframe():
     except Exception:
         return pd.DataFrame(columns = ["Module Code", "Module Title", "Semester"])
 
-def get_assessments_dataframe():
+def get_assessments_dataframe(user_id):
     """
     Gets all registered assessments to return as a DataFrame
     """
     current_uid = get_current_user_id()
     try:
-        response = supabase.table("assessments").select("*").eq("user_id", current_uid).execute()
+        response = supabase.table("assessments").select("*").eq("user_id", user_id).execute()
 
         if response.data:
             df = pd.DataFrame(response.data)
@@ -135,7 +135,7 @@ def get_assessments_dataframe():
             return pd.DataFrame(columns = ["Assessment ID", "Assessment Title", "Module Code", "Weight %", "Must Pass", "Week Due", "Result", "Component Scale"])
 
 @st.cache_data
-def get_assessments_from(module_code):
+def get_assessments_from(user_id, module_code):
     """
     Gets all registered assessments from a certain module and returns as a DataFrame
     """
@@ -143,7 +143,7 @@ def get_assessments_from(module_code):
     current_uid = get_current_user_id()
 
     try:
-        response = supabase.table("assessments").select("*").eq("user_id", current_uid).eq("module_code", module_code).execute()
+        response = supabase.table("assessments").select("*").eq("user_id", user_id).eq("module_code", module_code).execute()
         if response.data:
             df = pd.DataFrame(response.data)
             df.rename(columns = {
@@ -348,20 +348,20 @@ def delete_assessment(assessment_id):
 # FUNCTIONS FOR WEEKLY WORKLOAD PAGE [RETURNS DFS / DICTIONARIES]
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 @st.cache_data
-def get_weekly_workload(semester, module_code = None):
+def get_weekly_workload(user_id, semester, module_code = None):
     """
     Aggregates workload percentages categorised by academic week numbers.
     """
 
     current_uid = get_current_user_id()
     try:
-        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", user_id).eq("semester", semester).execute()
         valid_codes = [row["module_code"] for row in mod_response.data] if mod_response.data else []
 
         if not valid_codes:
             return pd.DataFrame(columns = ["Week", "Total Workload (%)", "Module"])
 
-        query = supabase.table("assessments").select("week, assessment_percentage, module_code").eq("user_id", current_uid).in_("module_code", valid_codes)
+        query = supabase.table("assessments").select("week, assessment_percentage, module_code").eq("user_id", user_id).in_("module_code", valid_codes)
 
 
         if module_code:
@@ -383,20 +383,20 @@ def get_weekly_workload(semester, module_code = None):
         return pd.DataFrame(columns = ["Week", "Total Workload (%)", "Module"])
 
 @st.cache_data
-def get_week_contributors(semester, target_week):
+def get_week_contributors(user_id, semester, target_week):
     """
     Lists unique module codes that have assessments due in target week.
     """
     current_uid = get_current_user_id()
 
     try:
-        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", user_id).eq("semester", semester).execute()
         valid_codes = [r["module_code"] for r in (mod_response.data or []) if r.get("module_code")]
 
         if not valid_codes:
             return pd.DataFrame(columns = ["module_code"])
 
-        response = supabase.table("assessments").select("module_code", "assessment_percentage").eq("user_id", current_uid).eq("week", int(target_week)).in_("module_code", valid_codes).execute()
+        response = supabase.table("assessments").select("module_code", "assessment_percentage").eq("user_id", user_id).eq("week", int(target_week)).in_("module_code", valid_codes).execute()
         if response.data:
             df = pd.DataFrame(response.data)
             df_grouped = df.groupby("module_code")["assessment_percentage"].sum().reset_index()
@@ -409,7 +409,7 @@ def get_week_contributors(semester, target_week):
         return pd.DataFrame(columns = ["Module Code", "Weight"])
 
 @st.cache_data
-def get_grade_progress(semester, module_code = None):
+def get_grade_progress(user_id, semester, module_code = None):
     """
     Computers total graded scores user has achieved vs upcoming marks.
     """
@@ -417,14 +417,14 @@ def get_grade_progress(semester, module_code = None):
     current_uid = get_current_user_id()
     try:
 
-        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", user_id).eq("semester", semester).execute()
         valid_codes = [row["module_code"] for row in mod_response.data] if mod_response.data else []
         
         if not valid_codes:
             return {"total_weight": 0.0, "completed_weight": 0.0, "earned_points": 0.0, "upcoming_weight": 0.0}
             
 
-        query = supabase.table("assessments").select("module_code, assessment_percentage, received_grade").eq("user_id", current_uid).in_("module_code", valid_codes)
+        query = supabase.table("assessments").select("module_code, assessment_percentage, received_grade").eq("user_id", user_id).in_("module_code", valid_codes)
         
         if module_code is not None:
             query = query.eq("module_code", module_code)
@@ -463,21 +463,21 @@ def get_grade_progress(semester, module_code = None):
         return {"total_weight": 0.0, "completed_weight": 0.0, "earned_points": 0.0, "upcoming_weight": 0.0}
 
 @st.cache_data
-def get_week_agenda(semester, target_week):
+def get_week_agenda(user_id, semester, target_week):
     """
     Queries all registered assessments due in a specific week for the active semester.
     """
     current_uid = get_current_user_id()
     try:
 
-        mod_response = supabase.table("modules").select("module_code").eq("user_id", current_uid).eq("semester", semester).execute()
+        mod_response = supabase.table("modules").select("module_code").eq("user_id", user_id).eq("semester", semester).execute()
         valid_codes = [row["module_code"] for row in mod_response.data] if mod_response.data else []
         
         if not valid_codes:
             return pd.DataFrame(columns=["Assessment ID", "Module Code", "Assessment Title", "Weight %", "Must Pass", "Received Grade"])
             
 
-        response = supabase.table("assessments").select("id, module_code, assessment_title, assessment_percentage, must_pass_component, received_grade").eq("user_id", current_uid).eq("week", int(target_week)).in_("module_code", valid_codes).order("module_code").execute()
+        response = supabase.table("assessments").select("id, module_code, assessment_title, assessment_percentage, must_pass_component, received_grade").eq("user_id", user_id).eq("week", int(target_week)).in_("module_code", valid_codes).order("module_code").execute()
         
         if not response.data:
             return pd.DataFrame(columns=["Assessment ID", "Module Code", "Assessment Title", "Weight %", "Must Pass", "Received Grade"])
