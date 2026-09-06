@@ -127,7 +127,7 @@ def edit_assessment_submission(assessment_id):
         new_code = ui.select("Select correct module:", options = module_list, index = code_index, key = "new_ass_code")
         new_percentage = st.slider("Enter correct weighting:", 0, 100, value = orig_percentage, key = "new_ass_weighting")
         new_must_pass = st.toggle("Must Pass Component", value = bool_must_pass, key = "new_must_pass")
-        new_week = ui.select("Select correct week assessment is due:", options = list(range(1, 18)), index = orig_week - 1, key = "new_ass_weeks_list")
+        new_week = ui.select("Select correct week assessment is due:", options = list(range(1, 28)), index = orig_week - 1, key = "new_ass_weeks_list")
         if "UCD" in user_profile["grading_system"]:
             new_component_scale = ui.select("Select correct component scale:", options = scale_list, index = scale_index, key = "new_component_scale")
 
@@ -299,7 +299,7 @@ def render_assessment_section():
                             f"this switch OFF and log the target week manually instead!*")
                         weeks = exam_weeks
                     else:
-                        weeks = st.multiselect("**Please select week(s) assessment is due**", options = list(range(1, 18)))
+                        weeks = st.multiselect("**Please select week(s) assessment is due**", options = list(range(1, 28)))
 
                 with tab_weightings:
                     percentage = st.slider("Weight on Final Grade (%)", 0, 100)
